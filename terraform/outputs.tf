@@ -8,9 +8,9 @@ output "nhi_automation_runner_access_key_id" {
 }
 
 output "nhi_automation_runner_secret_access_key" {
-  value = aws_iam_access_key.nhi_runner_keys.secret
+  value       = aws_iam_access_key.nhi_runner_keys.secret
   description = "The access secret for the NHI Automation Runner IAM user"
-  sensitive = true
+  sensitive   = true
 }
 
 output "nhi_automation_runner_role_arn" {

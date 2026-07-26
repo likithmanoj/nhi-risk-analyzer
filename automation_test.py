@@ -1,14 +1,10 @@
 from nhi.aws.s3 import upload_file
-from nhi.aws.iam import list_users
+from nhi.services.inventory import create_inventory
+from nhi.services.export import export_inventory
 
-file_name = "test_file.txt"
-with open(file_name, "w") as f:
-    f.write("This is a test file for S3 upload.")
-upload_file(file_name)
+inventory = create_inventory()
+inventory_file = export_inventory(inventory, "inventory.json")
+upload_file(inventory_file)
 
-users = list_users()
-
-for user in users:
-    print(user["UserName"])
 
 
