@@ -27,7 +27,7 @@ resource "aws_iam_access_key" "nhi_runner_keys" {
 data "aws_partition" "current" {}
 
 resource "aws_iam_policy" "role_policy" {
-  name        = "${var.project_name}-${var.environment}-s3-policy"
+  name        = "${var.project_name}-${var.environment}-runner-policy"
   path        = "/"
   description = "IAM policy for automation runner role to access S3 buckets in ${var.environment} environment"
 
@@ -45,6 +45,12 @@ resource "aws_iam_policy" "role_policy" {
           # "arn:${data.aws_partition.current.partition}:s3:::${var.project_name}-${var.environment}-bucket/*",
           aws_s3_bucket.nhi_automation_bucket.arn,
           "${aws_s3_bucket.nhi_automation_bucket.arn}/*"]
+      },
+      {
+        # Allow the automation runner to discover IAM users for inventory collection.
+        Action = ["iam:ListUsers"]
+        Effect = "Allow"
+        Resource = "*"
       }
     ]
   })
