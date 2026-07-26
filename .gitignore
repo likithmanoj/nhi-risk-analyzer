@@ -34,3 +34,9 @@ admin.sh
 runner.sh
 keys.env
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
