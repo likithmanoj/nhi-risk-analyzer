@@ -7,17 +7,23 @@ def list_users():
     iam_client = session.client('iam')
     response = iam_client.list_users()
     return response['Users']
-
 def list_roles():
     session = get_session()
     iam_client = session.client('iam')
     response = iam_client.list_roles()
     return response['Roles']
-
 def list_groups():
     session = get_session()
     iam_client = session.client('iam')
     response = iam_client.list_groups()
     return response['Groups']
-
-
+def list_policies():
+    session = get_session()
+    iam_client = session.client('iam')
+    response = iam_client.list_policies()
+    return response['Policies']
+def list_attached_user_policies(username):
+    session = get_session()
+    iam_client = session.client('iam')
+    response = iam_client.list_attached_user_policies(UserName = username)
+    return response['AttachedPolicies']

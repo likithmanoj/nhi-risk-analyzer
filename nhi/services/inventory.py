@@ -5,6 +5,9 @@ def create_inventory():
     roles = iam.list_roles()
     groups = iam.list_groups()
 
+    for user in users:
+        user['AttachedPolicies'] = iam.list_attached_user_policies(user['UserName'])   
+
     return {
         "users": users,
         "roles": roles,
