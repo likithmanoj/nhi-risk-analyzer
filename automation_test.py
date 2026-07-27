@@ -5,6 +5,3 @@ from nhi.services.export import export_inventory
 inventory = create_inventory()
 inventory_file = export_inventory(inventory, "inventory.json")
 upload_file(inventory_file)
-
-
-

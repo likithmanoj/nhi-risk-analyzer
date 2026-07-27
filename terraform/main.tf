@@ -48,7 +48,7 @@ resource "aws_iam_policy" "role_policy" {
       },
       {
         # Allow the automation runner to discover IAM identities for inventory collection.
-        Action   = ["iam:ListUsers", "iam:ListRoles", "iam:ListGroups"]
+        Action   = ["iam:ListUsers", "iam:ListRoles", "iam:ListGroups", "iam:ListAttachedUserPolicies"]
         Effect   = "Allow"
         Resource = "*"
       }
