@@ -50,3 +50,32 @@ def list_attached_role_policies(rolename):
     for page in paginator.paginate(RoleName = rolename):
         role_attached_policies.extend(page['AttachedPolicies'])
     return role_attached_policies
+def list_user_inline_policies(username):
+    session = get_session()
+    iam_client = session.client('iam')
+    paginator = iam_client.get_paginator('list_user_policies')
+    user_inline_policies = []
+    for page in paginator.paginate(UserName = username):
+        user_inline_policies.extend(page['PolicyNames'])
+    return user_inline_policies
+def list_role_inline_policies(rolename):
+    session = get_session()
+    iam_client = session.client('iam')
+    paginator = iam_client.get_paginator('list_role_policies')
+    role_inline_policies = []
+    for page in paginator.paginate(RoleName = rolename):
+        role_inline_policies.extend(page['PolicyNames'])
+    return role_inline_policies
+def get_user_inline_policy(username, policyname):
+    response = get_session().client('iam').get_user_policy(UserName = username, PolicyName = policyname)
+    return {
+        "PolicyName" : response["PolicyName"],
+        "PolicyDocument": response["PolicyDocument"]}
+def get_role_inline_policy(rolename, policyname):
+    response = get_session().client('iam').get_role_policy(RoleName = rolename, PolicyName = policyname)
+    return {
+        "PolicyName" : response["PolicyName"],
+        "PolicyDocument": response["PolicyDocument"]}
+
+
+   
