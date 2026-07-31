@@ -76,6 +76,47 @@ def get_role_inline_policy(rolename, policyname):
     return {
         "PolicyName" : response["PolicyName"],
         "PolicyDocument": response["PolicyDocument"]}
+def get_managed_policy(policy_arn):
+    session = get_session()
+    iam_client = session.client("iam")
+
+    policy = iam_client.get_policy(
+        PolicyArn=policy_arn
+    )["Policy"]
+
+    version = iam_client.get_policy_version(
+        PolicyArn=policy_arn,
+        VersionId=policy["DefaultVersionId"]
+    )["PolicyVersion"]
+
+    return {
+        "PolicyName": policy["PolicyName"],
+        "PolicyArn": policy["Arn"],
+        "PolicyDocument": version["Document"]
+    }
+def list_attached_group_policies(groupName):
+    session = get_session()
+    iam_client = session.client('iam')
+    paginator = iam_client.get_paginator('list_attached_group_policies')
+    group_attached_policies = []
+    for page in paginator.paginate(GroupName = groupName):
+        group_attached_policies.extend(page['AttachedPolicies'])
+    return group_attached_policies
+def list_group_inline_policies(groupName):
+    session = get_session()
+    iam_client = session.client('iam')
+    paginator = iam_client.get_paginator('list_group_policies')
+    group_inline_policies = []
+    for page in paginator.paginate(GroupName = groupName):
+        group_inline_policies.extend(page['PolicyNames'])
+    return group_inline_policies
+def get_group_inline_policy(groupname, policyname):
+    response = get_session().client('iam').get_group_policy(GroupName = groupname, PolicyName = policyname)
+    return{
+        "PolicyName" : response["PolicyName"],
+        "PolicyDocument" : response["PolicyDocument"]
+    }  
+    
 
 
    
