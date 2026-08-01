@@ -42,3 +42,4 @@ __pycache__/
 *.pyd
 
 inventory.json
+tests.py
