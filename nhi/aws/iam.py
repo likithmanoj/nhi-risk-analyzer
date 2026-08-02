@@ -115,7 +115,10 @@ def get_group_inline_policy(groupname, policyname):
     return{
         "PolicyName" : response["PolicyName"],
         "PolicyDocument" : response["PolicyDocument"]
-    }  
+    }
+def get_role_trust_policy(rolename):
+    return get_session().client('iam').get_role(RoleName = rolename)['Role']["AssumeRolePolicyDocument"]
+
     
 
 
