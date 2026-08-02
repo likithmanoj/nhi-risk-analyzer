@@ -29,6 +29,7 @@ def create_inventory():
         for policy in role['InlinePolicies']:
             roleInlinepolicyList.append(iam.get_role_inline_policy(role['RoleName'],policy))
         role['InlinePolicies'] = roleInlinepolicyList
+        role['TrustPolicy'] = iam.get_role_trust_policy(role['RoleName'])
 
     for group in groups:
         group['AttachedPolicies'] = iam.list_attached_group_policies(group['GroupName'])

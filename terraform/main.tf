@@ -64,6 +64,7 @@ resource "aws_iam_policy" "role_policy" {
           "iam:GetUserPolicy",
           "iam:GetRolePolicy",
           "iam:GetGroupPolicy",
+          "iam:GetRole",
 
           "iam:GetPolicy",
           "iam:GetPolicyVersion"
