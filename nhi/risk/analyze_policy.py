@@ -23,6 +23,8 @@ def analyze_policy(policies,identityType,identityName):
                     "IdentityName": identityName,
                     "PolicyName" : policy['PolicyName'],
                     "Finding": "Administrator-Equivalent Permissions",
+                    "Resource": resources_findings[0]["Resource"],
+                    "Action": actions_findings[0]["Action"],
                     "Severity": "CRITICAL"})
             elif resources_findings:
                 for resource in resources_findings:
@@ -74,4 +76,16 @@ def analyze_resources(resources):
             if "*" in resource:
                 resource_findings.append({"Resource": resource})
                 break
-    return resource_findings                               
+    return resource_findings
+
+def analyze_admin_access(policies,identityType,identityName):
+    findings = [] #local findings
+    for policy in policies:
+        if policy['PolicyName'] == "AdministratorAccess":
+            findings.append({
+                "IdentityType":identityType,
+                "IdentityName": identityName,
+                "PolicyName" : policy['PolicyName'],
+                "Finding": "Wildcard Resources",
+                "Severity": "HIGH"})
+    return findings
