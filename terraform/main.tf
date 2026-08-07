@@ -67,7 +67,9 @@ resource "aws_iam_policy" "role_policy" {
           "iam:GetRole",
 
           "iam:GetPolicy",
-          "iam:GetPolicyVersion"
+          "iam:GetPolicyVersion",
+          "iam:ListAccessKeys",
+          "iam:GetAccessKeyLastUsed"
         ]
         Effect   = "Allow"
         Resource = "*"
