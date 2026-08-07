@@ -119,7 +119,10 @@ def get_group_inline_policy(groupname, policyname):
 def get_role_trust_policy(rolename):
     return get_session().client('iam').get_role(RoleName = rolename)['Role']["AssumeRolePolicyDocument"]
 
-    
+def get_access_keys(username):
+    return get_session().client('iam').list_access_keys(UserName = username)['AccessKeyMetadata']
+def get_access_key_last_used(accessKeyId):
+    return get_session().client('iam').get_access_key_last_used(AccessKeyId = accessKeyId)['AccessKeyLastUsed']
 
 
    

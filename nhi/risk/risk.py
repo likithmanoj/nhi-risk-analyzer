@@ -1,6 +1,7 @@
 from nhi.services.inventory import create_inventory
-from nhi.risk.analyze_policy import analyze_policy
-from nhi.risk.analyze_admin_access import analyze_admin_access
+from nhi.risk.rules.wildcards import analyze_policy, analyze_admin_access
+from nhi.risk.rules.credentials import analyze_stale_access_keys
+
 
 response = create_inventory()
 
@@ -14,6 +15,7 @@ for user in users:
     findings.extend(analyze_policy(user['AttachedPolicies'], "User", user['UserName']))    
     findings.extend(analyze_policy(user['InlinePolicies'], "User", user['UserName']))
     findings.extend(analyze_admin_access(user['AttachedPolicies'], "User", user['UserName']))
+    findings.extend(analyze_stale_access_keys(user['AccessKeys'], user['UserName']))
 
 for group in groups:
     findings.extend(analyze_policy(group['AttachedPolicies'], "Group", group['GroupName']))
