@@ -75,9 +75,13 @@ To eliminate redundant AWS STS authentication calls during inventory collection,
 | **`IAM_01`** | Wildcard Actions in Policies | Policy Analysis | `HIGH` | ✅ Implemented |
 | **`IAM_02`** | Wildcard Resources in Policies | Policy Analysis | `HIGH` | ✅ Implemented |
 | **`IAM_03`** | Full Administrator Access | Policy Analysis | `CRITICAL` | ✅ Implemented |
-| **`IAM_07`** | Stale Access Keys (>90 Days Old) | Credential Security | `MEDIUM` | ✅ Implemented |
-| **`IAM_08`** | Unused & Dormant Access Keys | Credential Security | `HIGH` / `MEDIUM` | ✅ Implemented |
+| **`IAM_04`** | Privilege Escalation via `iam:PassRole` | Privilege Escalation | `HIGH` | ✅ Implemented |
+| **`IAM_05`** | Privilege Escalation via `iam:CreatePolicyVersion` | Privilege Escalation | `CRITICAL` | ✅ Implemented |
+| **`IAM_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`) | Privilege Escalation | `CRITICAL` | ✅ Implemented |
+| **`IAM_07`** | Privilege Escalation via `iam:CreateAccessKey` | Privilege Escalation | `CRITICAL` | ✅ Implemented |
+| **`IAM_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`) | Privilege Escalation | `CRITICAL` | ✅ Implemented |
 | **`IAM_09`** | Permissive Role Trust Policies | Trust Analysis | `HIGH` | 📋 Planned |
+| **`IAM_10`** | Unrestricted `sts:AssumeRole` Execution | Privilege Escalation | `HIGH` / `CRITICAL` | 📋 Planned |
 
 ### Example Security Finding
 
