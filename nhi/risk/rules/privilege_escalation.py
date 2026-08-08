@@ -120,13 +120,11 @@ def analyze_console_access_escalation(policies, identityType, identityName): #IA
   
 
 def analyze_actions_for_privilege_escalation(actions, check):
-    """Helper to check if actions allow a specific IAM privilege escalation action.
-    
-    Only matches if:
-      1. Action is full wildcard '*'
-      2. Action is full IAM wildcard 'iam:*'
-      3. Action explicitly contains or matches the target 'check' string
-    """
+ 
+    # Only matches if:
+    #   1. Action is full wildcard '*'
+    #   2. Action is full IAM wildcard 'iam:*'
+    #   3. Action explicitly contains or matches the target 'check' string
     action_findings = []
     
     if isinstance(actions, str):
