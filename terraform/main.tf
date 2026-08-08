@@ -97,7 +97,6 @@ resource "aws_iam_policy" "nhi_user_sts_policy" {
     ]
   })
 }
-
 resource "aws_iam_user_policy_attachment" "nhi_runner_policy_attachment" {
   user       = aws_iam_user.nhi_automation_runner.name
   policy_arn = aws_iam_policy.nhi_user_sts_policy.arn

@@ -1,7 +1,9 @@
 #iam.py is responsible for encapsulating all AWS IAM operations required by the NHI platform while hiding the underlying boto3 IAM implementation from the rest of the application.
 
 from nhi.aws.session import get_session
-
+from botocore.exceptions import ClientError
+import logging
+logger = logging.getLogger(__name__)
 def list_users():
     session = get_session()
     iam_client = session.client('iam')
@@ -121,8 +123,24 @@ def get_role_trust_policy(rolename):
 
 def get_access_keys(username):
     return get_session().client('iam').list_access_keys(UserName = username)['AccessKeyMetadata']
-def get_access_key_last_used(accessKeyId):
-    return get_session().client('iam').get_access_key_last_used(AccessKeyId = accessKeyId)['AccessKeyLastUsed']
+def get_access_key_last_used(access_key_id: str) -> dict:
+    try:
+        iam_client = get_session().client('iam')
+        response = iam_client.get_access_key_last_used(AccessKeyId=access_key_id)
+        last_used_info = response.get('AccessKeyLastUsed', {})
 
+        last_used_date = last_used_info.get('LastUsedDate')
 
+        return {
+            "LastUsedDate": last_used_date.isoformat() if last_used_date else None,
+            "ServiceName": last_used_info.get('ServiceName', 'N/A'),
+            "Region": last_used_info.get('Region', 'N/A')
+        }
+    except ClientError as e:
+        logger.warning(f"Failed to fetch last used info for key {access_key_id}: {e}")
+        return {
+            "LastUsedDate": None,
+            "ServiceName": "N/A",
+            "Region": "N/A"
+        }
    

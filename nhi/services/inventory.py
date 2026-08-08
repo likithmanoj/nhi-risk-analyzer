@@ -19,6 +19,8 @@ def create_inventory():
         user['InlinePolicies'] = userInlinepolicyList
 
         user["AccessKeys"] = iam.get_access_keys(user['UserName'])
+        for key in user['AccessKeys']:
+            key['AccessKeyLastUsed'] = iam.get_access_key_last_used(key['AccessKeyId'])
 
     for role in roles:
         role['AttachedPolicies'] = iam.list_attached_role_policies(role['RoleName'])
