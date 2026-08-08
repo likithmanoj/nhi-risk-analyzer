@@ -119,19 +119,28 @@ def analyze_console_access_escalation(policies, identityType, identityName): #IA
     return findings
   
 
-def analyze_actions_for_privilege_escalation(actions, check): # check only accepts string, its only a helper
-    action_findings = []
-    if isinstance(actions, str):
-            if "*" in actions or str(check) in actions or "iam:*" in actions:
-                action_findings.append({"Action": actions})               
-                
-                           
-    elif isinstance(actions, list):
-        action_findings = []
-        for action in actions:
-            if "*" in action or str(check) in action or "iam:*" in action:
-                action_findings.append({"Action": action})
+def analyze_actions_for_privilege_escalation(actions, check):
+    """Helper to check if actions allow a specific IAM privilege escalation action.
     
+    Only matches if:
+      1. Action is full wildcard '*'
+      2. Action is full IAM wildcard 'iam:*'
+      3. Action explicitly contains or matches the target 'check' string
+    """
+    action_findings = []
+    
+    if isinstance(actions, str):
+        actions_list = [actions]
+    elif isinstance(actions, list):
+        actions_list = actions
+    else:
+        return action_findings
+
+    for action in actions_list:
+        # Match only full admin '*', IAM wildcard 'iam:*', or the specific IAM action
+        if action == "*" or action == "iam:*" or check in action:
+            action_findings.append({"Action": action})
+
     return action_findings
 
 
