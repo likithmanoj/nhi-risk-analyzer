@@ -1,21 +1,25 @@
 def analyze_admin_access(policies,identityType,identityName):
-    findings = [] #local findings
+    findings = []
     for policy in policies:
         if policy['PolicyArn'] == "arn:aws:iam::aws:policy/AdministratorAccess":
             findings.append({
+                "RuleID": "IAM_03",
+                "Severity": "CRITICAL",
                 "IdentityType":identityType,
                 "IdentityName": identityName,
                 "PolicyName" : policy['PolicyName'],
                 "Finding": "AdministratorAccess Managed Policy Attached",
-                "Severity": "CRITICAL"})
+                })
     return findings
 
 def analyze_policy(policies,identityType,identityName):
     findings = []
     
     for policy in policies:
-        for statement in policy["PolicyDocument"]["Statement"]:
-
+        statements = policy["PolicyDocument"]["Statement"]
+        if isinstance(statements, dict):
+                        statements = [statements]
+        for statement in statements:
             actions = []
             resources = []
             if "Action" not in statement and "Resource" not in statement:
@@ -31,32 +35,37 @@ def analyze_policy(policies,identityType,identityName):
                 continue
             if actions_findings and resources_findings:
                     findings.append({
+                    "RuleID": "IAM_03",
+                    "Severity": "CRITICAL",
                     "IdentityType":identityType,
                     "IdentityName": identityName,
                     "PolicyName" : policy['PolicyName'],
                     "Finding": "Administrator-Equivalent Permissions",
                     "Resource": resources_findings[0]["Resource"],
                     "Action": actions_findings[0]["Action"],
-                    "Severity": "CRITICAL"})
+                    })
             elif resources_findings:
                 for resource in resources_findings:
                     findings.append({
+                    "RuleID": "IAM_02",
+                    "Severity": "HIGH",
                     "IdentityType":identityType,
                     "IdentityName": identityName,
                     "PolicyName" : policy['PolicyName'],
                     "Finding": "Wildcard Resources",
                     "Resource": resource["Resource"],
-                    "Severity": "HIGH"})
+                    })
             elif actions_findings:
                 for action in actions_findings:
                     findings.append(
-                    {
+                    {  
+                        "RuleID": "IAM_01",
+                        "Severity": "HIGH",
                        "IdentityType":identityType,
                        "IdentityName": identityName,
                         "PolicyName" : policy['PolicyName'],
                         "Finding": "Wildcard Actions",
                         "Action": action["Action"],
-                        "Severity": "HIGH" 
                     })
                   
 
@@ -89,15 +98,3 @@ def analyze_resources(resources):
                 resource_findings.append({"Resource": resource})
                 break
     return resource_findings
-
-def analyze_admin_access(policies,identityType,identityName):
-    findings = [] #local findings
-    for policy in policies:
-        if policy['PolicyName'] == "AdministratorAccess":
-            findings.append({
-                "IdentityType":identityType,
-                "IdentityName": identityName,
-                "PolicyName" : policy['PolicyName'],
-                "Finding": "Wildcard Resources",
-                "Severity": "HIGH"})
-    return findings
