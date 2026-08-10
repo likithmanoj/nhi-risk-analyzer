@@ -1,4 +1,3 @@
-```markdown
 # NHI Risk Analyzer for AWS
 
 An offline-first security automation platform that discovers, inventories, analyzes, and risk-assesses **Non-Human Identities (NHIs)** — IAM users, groups, roles, and associated policies — across AWS environments.
@@ -9,7 +8,7 @@ An offline-first security automation platform that discovers, inventories, analy
 
 **NHI Risk Analyzer** addresses a critical cloud security challenge: enterprise AWS environments accumulate hundreds of non-human identities (service accounts, automation roles, CI/CD credentials, cross-account roles) with minimal visibility into which identities are over-privileged, dormant, or introduce privilege-escalation risk.
 
-The platform enforces strict architectural decoupling between **State Collection** (live AWS ingestion into an `inventory.json` snapshot) and **Offline Risk Evaluation** (evaluating IAM security rules against the snapshot without live network dependencies).
+The platform enforces strict architectural decoupling between **State Collection** (live AWS ingestion into an `inventory.json` snapshot) and **Offline Risk Evaluation** (evaluating IAM security rules against the snapshot without live network dependencies). This means the risk engine can be re-run, tested, and iterated on without touching AWS again, and every finding is reproducible against the exact account state it was generated from.
 
 ---
 
@@ -22,6 +21,7 @@ Enterprise AWS environments routinely contain non-human identities that are:
 - **Dormant & Forgotten:** Left active long after workloads or integration pipelines have been decommissioned.
 - **Incompletely Audited:** Carrying inline policies that bypass standard managed-policy checks.
 - **Credential Risks:** Utilizing access keys that are stale (>90 days old) or have never been used since inception.
+- **Escalation-Prone:** Holding IAM permissions that, alone or combined, allow privilege escalation to full administrator access — documented attack paths that most policy-only scanners don't check for.
 
 NHI Risk Analyzer automates discovery and security analysis using live AWS APIs and offline rule processing.
 
@@ -47,7 +47,6 @@ NHI Risk Analyzer automates discovery and security analysis using live AWS APIs 
                                                         │ Remediation &   │
                                                         │ Team Alerts     │
                                                         └─────────────────┘
-
 ```
 
 1. **State Collection (`nhi/services/inventory.py`):** Queries AWS IAM APIs via Boto3, enriches user access key metadata with `GetAccessKeyLastUsed` details, and serializes a clean state snapshot to `inventory.json`.
@@ -70,10 +69,12 @@ To eliminate redundant AWS STS authentication calls during inventory collection,
 
 ## 🛡️ Rule Coverage Status
 
+Rule IDs are grouped by category rather than numbered strictly sequentially — `IAM_01–03` cover general policy analysis, `IAM_04–08` cover documented privilege-escalation paths, and `IAM_11–12` cover credential hygiene. `IAM_09–10` are reserved for planned trust-policy analysis.
+
 | Rule ID | Name | Category | Severity | Status |
 | --- | --- | --- | --- | --- |
 | **`IAM_01`** | Wildcard Actions in Policies | Policy Analysis | `HIGH` | ✅ Implemented |
-| **`IAM_02`** | Wildcard Resources in Policies | Policy Analysis | `HIGH` | ✅ Implemented |
+| **`IAM_02`** | Wildcard Resources in Policies | Policy Analysis | `HIGH` / `LOW` (scoped-prefix downgrade) | ✅ Implemented |
 | **`IAM_03`** | Full Administrator Access | Policy Analysis | `CRITICAL` | ✅ Implemented |
 | **`IAM_04`** | Privilege Escalation via `iam:PassRole` | Privilege Escalation | `HIGH` | ✅ Implemented |
 | **`IAM_05`** | Privilege Escalation via `iam:CreatePolicyVersion` | Privilege Escalation | `CRITICAL` | ✅ Implemented |
@@ -82,11 +83,16 @@ To eliminate redundant AWS STS authentication calls during inventory collection,
 | **`IAM_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`) | Privilege Escalation | `CRITICAL` | ✅ Implemented |
 | **`IAM_09`** | Permissive Role Trust Policies | Trust Analysis | `HIGH` | 📋 Planned |
 | **`IAM_10`** | Unrestricted `sts:AssumeRole` Execution | Privilege Escalation | `HIGH` / `CRITICAL` | 📋 Planned |
+| **`IAM_11`** | Stale Access Keys (>90 Days Old) | Credential Security | `HIGH` / `LOW` | ✅ Implemented |
+| **`IAM_12`** | Unused & Dormant Access Keys (>30 Days) | Credential Security | `HIGH` | ✅ Implemented |
+
+**Detection methodology sources:** Rules are informed by Rhino Security Labs' documented AWS IAM privilege escalation research (21 methods), Salesforce's Cloudsplaining policy-severity methodology, the CIS AWS Foundations Benchmark (credential hygiene thresholds), and AWS's own IAM best-practices documentation.
 
 ### Example Security Finding
 
 ```json
 {
+  "RuleID": "IAM_03",
   "IdentityType": "User",
   "IdentityName": "pam-suite-admin",
   "PolicyName": "IAMFullAccess",
@@ -95,7 +101,6 @@ To eliminate redundant AWS STS authentication calls during inventory collection,
   "Resource": "*",
   "Severity": "CRITICAL"
 }
-
 ```
 
 ---
@@ -105,24 +110,20 @@ To eliminate redundant AWS STS authentication calls during inventory collection,
 ### Completed Milestones
 
 * [x] **Phase 1: AWS Infrastructure Foundation**
-* Infrastructure as Code via Terraform (`terraform/`)
-* Least-privilege IAM architecture and assume-role execution
-* Secure remote S3 state backend with encryption & versioning
-
+  * Infrastructure as Code via Terraform (`terraform/`)
+  * Least-privilege IAM architecture and assume-role execution
+  * Secure remote S3 state backend with encryption & versioning
 
 * [x] **Phase 2: Discovery Engine & Ingestion**
-* IAM Users, Groups, Roles, Managed Policies & Inline Policies discovery
-* Access Key metadata enrichment (`GetAccessKeyLastUsed`)
-* Session caching for Boto3 API pagination
-* Snapshot export to local `inventory.json` and remote S3
-
+  * IAM Users, Groups, Roles, Managed Policies & Inline Policies discovery
+  * Access Key metadata enrichment (`GetAccessKeyLastUsed`)
+  * Session caching for Boto3 API pagination
+  * Snapshot export to local `inventory.json` and remote S3
 
 * [x] **Phase 3: Risk Evaluation Engine**
-* Modular security rules (`wildcards.py`, `credentials.py`)
-* Detection for wildcard actions/resources, admin access, stale keys, and unused/dormant keys
-* Unit testing suite with `@patch` mock injection (`tests/`)
-
-
+  * Modular security rules (`wildcards.py`, `credentials.py`, `privilege_escalation.py`)
+  * Detection for wildcard actions/resources, admin access, stale keys, unused/dormant keys, and documented IAM privilege-escalation paths
+  * Unit testing suite with `@patch` mock injection (`tests/`)
 
 ---
 
@@ -133,56 +134,49 @@ To eliminate redundant AWS STS authentication calls during inventory collection,
 The primary engineering objective for remediation is **zero production downtime**. Automated policy changes will follow a safe, gradual rollback workflow:
 
 * **Dry-Run & Impact Simulation:**
-* Evaluate proposed policy reductions against historical AWS CloudTrail activity before applying changes.
-* Generate a "Diff Preview" showing exact permissions to be detached or replaced.
-
+  * Evaluate proposed policy reductions against historical AWS CloudTrail activity before applying changes.
+  * Generate a "Diff Preview" showing exact permissions to be detached or replaced.
 
 * **Non-Destructive Deactivation (Safe Remediation):**
-* **Access Key Inactivation:** Automatically set unused/dormant keys to `Inactive` rather than deleting them, preserving quick emergency rollback options.
-* **Inline Policy Detachment / Backup:** Store exact policy versions in S3 prior to stripping wildcard permissions.
-
+  * **Access Key Inactivation:** Automatically set unused/dormant keys to `Inactive` rather than deleting them, preserving quick emergency rollback options.
+  * **Inline Policy Detachment / Backup:** Store exact policy versions in S3 prior to stripping wildcard permissions.
 
 * **Automated Rollback Mechanism:**
-* One-click restore workflows to re-enable keys or re-attach original policies if service degradation is detected.
-
+  * One-click restore workflows to re-enable keys or re-attach original policies if service degradation is detected.
 
 * **Production Guardrails:**
-* Whitelisting engine (`nhi-ignore.yaml`) to protect core infrastructure roles (e.g., break-glass roles, deployment pipelines) from automated remediation actions.
-
-
+  * Whitelisting engine (`nhi-ignore.yaml`) to protect core infrastructure roles (e.g., break-glass roles, deployment pipelines) from automated remediation actions.
 
 #### Phase 5: Team Communication & Event Notifications
 
 To bridge security findings with DevOps workflows, the platform will integrate real-time notifications and ticketing pipelines:
 
 * **Slack & Microsoft Teams Webhooks:**
-* High and Critical findings pushed to dedicated SecOps channels with interactive "Acknowledge" or "Remediate" buttons.
-* Daily digest summaries detailing new, resolved, and stale security risks.
-
+  * High and Critical findings pushed to dedicated SecOps channels with interactive "Acknowledge" or "Remediate" buttons.
+  * Daily digest summaries detailing new, resolved, and stale security risks.
 
 * **Jira / ITSM Integration:**
-* Automatic ticket generation for identified high-severity policy wildcards or dormant keys, assigning tasks directly to resource owner teams.
-
+  * Automatic ticket generation for identified high-severity policy wildcards or dormant keys, assigning tasks directly to resource owner teams.
 
 * **Event-Driven Architecture (AWS EventBridge / Lambda):**
-* Trigger scans automatically upon IAM creation events (`CreateUser`, `CreateAccessKey`, `PutRolePolicy`).
-
-
+  * Trigger scans automatically upon IAM creation events (`CreateUser`, `CreateAccessKey`, `PutRolePolicy`).
+  * At this point the automation runner's authentication also moves off static keys entirely — GitHub Actions via OIDC federation for CI/CD triggers, and a Lambda execution role directly as the trust-policy principal for event-driven triggers.
 
 ---
 
 ## ⚙️ Environment & Execution Setup
 
+> **⚠️ Local development note:** the setup below uses a static IAM access key for the runner identity, sourced via `admin.sh`/`runner.sh`. This is a **temporary, local-dev-only pattern** — the runner's own Terraform-managed IAM user only holds `sts:AssumeRole` permission (see `terraform/main.tf`), with all actual scan/export permissions living on the assumed role, not the user. The static key exists solely to bootstrap that first `AssumeRole` call during local development and is not intended to ship in any deployed or public-facing version of this project. Planned replacements: **AWS IAM Identity Center (SSO)** for local/human use, and **GitHub OIDC federation** for the CI/CD `nhi-action` (Phase 5) — both eliminate the static key entirely by authenticating the caller directly and issuing short-lived credentials.
+
 The scanner relies on environment variables set up via shell scripts (`admin.sh` and `runner.sh`) to extract Terraform outputs and configure execution session credentials.
 
 ### 1. Admin Credentials Script (`admin.sh`)
 
-Create `admin.sh` to export initial administrator credentials required for Terraform operations:
+Create `admin.sh` (not committed — add to `.gitignore`) to export initial administrator credentials required for Terraform operations:
 
 ```bash
 export AWS_ACCESS_KEY_ID="<YOUR_ADMIN_ACCESS_KEY>"
 export AWS_SECRET_ACCESS_KEY="<YOUR_ADMIN_SECRET_KEY>"
-
 ```
 
 ### 2. Runner Setup Script (`runner.sh`)
@@ -208,7 +202,6 @@ export BUCKET_NAME="pam-infrastructure-automation-suite-dev-bucket"
 
 # Return to project root directory
 cd "$CURRENT_DIR"
-
 ```
 
 ---
@@ -257,8 +250,9 @@ The scanner execution role requires the following minimal IAM policy to inventor
     }
   ]
 }
-
 ```
+
+> **Note:** most of the `iam:List*`/`iam:Get*` actions above can be consolidated into a single `iam:GetAccountAuthorizationDetails` call, which returns users, groups, roles, and all attached/inline policy documents in one response. `ListAccessKeys` and `GetAccessKeyLastUsed` are not covered by that call and stay separate. This consolidation is a planned simplification, tracked for a future update — the granular list above reflects the current `terraform/main.tf`.
 
 ---
 
@@ -274,19 +268,21 @@ nhi-risk-analyzer/
 │   ├── risk/
 │   │   ├── risk.py           # Core risk engine runner
 │   │   └── rules/            # Modular evaluation rules
-│   │       ├── credentials.py# IAM_07 & IAM_08 evaluation logic
-│   │       └── wildcards.py  # IAM_01, IAM_02 & IAM_03 evaluation logic
+│   │       ├── wildcards.py            # IAM_01, IAM_02, IAM_03
+│   │       ├── privilege_escalation.py # IAM_04–IAM_08 (Rhino-based escalation paths)
+│   │       └── credentials.py          # IAM_11, IAM_12
 │   ├── services/
 │   │   ├── inventory.py      # State collection & key enrichment
 │   │   └── export.py         # Output export handlers
 │   └── config.py             # Global threshold configurations
-├── terraform/                # Infrastructure as Code for runner & S3 bucket
-├── tests/                    # Automated unit test suite
-│   ├── test_credentials.py   # Rule unit tests for IAM_08
-│   └── test_inventory.py     # Mock-injected inventory tests
-├── automation_test.py        # End-to-end integration test runner
+├── terraform/                 # Infrastructure as Code for runner & S3 bucket
+│   ├── main.tf                # Runner IAM user/role, S3 bucket, policies
+│   └── remote_state.tf        # Terraform state backend bucket (see Quick Start bootstrap note)
+├── tests/                     # Automated unit test suite
+│   ├── test_credentials.py    # Rule unit tests for IAM_11 / IAM_12
+│   └── test_inventory.py      # Mock-injected inventory tests
+├── automation_test.py         # End-to-end integration test runner
 └── README.md
-
 ```
 
 ---
@@ -302,26 +298,79 @@ nhi-risk-analyzer/
 ### 1. Clone & Setup Virtual Environment
 
 ```bash
-git clone [https://github.com/likithmanoj/nhi-risk-analyzer.git](https://github.com/likithmanoj/nhi-risk-analyzer.git)
+git clone https://github.com/likithmanoj/nhi-risk-analyzer.git
 cd nhi-risk-analyzer
 
 python3 -m venv .venv
 source .venv/bin/activate
 pip install boto3 pytest
-
 ```
 
-### 2. Provision Infrastructure (Terraform)
+### 2. Bootstrap the Remote State Backend (first-time setup only)
+
+The S3 bucket that stores Terraform's remote state is itself a Terraform-managed resource (`terraform/remote_state.tf`), which means it can't be its own backend on the very first apply. This was solved in two passes:
+
+**Pass 1 — create the backend bucket while still using local state:**
 
 ```bash
 cd terraform
 terraform init
-terraform apply -auto-approve
-cd ..
-
+terraform apply
 ```
 
-### 3. Source Credentials & Execute Scanner
+At this stage `remote_state.tf`'s resources (bucket, versioning, encryption, public access block) are created, and Terraform is still tracking state locally (`terraform.tfstate` in the working directory) — the backend configuration hasn't been added to the config yet.
+
+**Pass 2 — add the backend block and migrate:**
+
+Once the bucket exists, add the `backend "s3" {...}` block (pointing at the bucket from Pass 1) to your Terraform configuration, then re-initialize:
+
+```bash
+terraform init
+```
+
+Terraform detects the existing local state file and prompts:
+
+```
+Do you want to copy existing state to the new backend?
+```
+
+Answering `yes` copies the local `terraform.tfstate` into the S3 backend. From this point on, Terraform reads and writes remote state instead of the local file.
+
+> **Provider version conflict during migration:** if the remote state was created with a newer AWS provider version than your local config is constrained to (e.g. state written with provider `6.x`, local config pinned to `~> 5.0`), migration can fail with `Resource instance managed by newer provider version` — the older provider can't decode state written by a newer provider's schema. Fix by updating `required_providers` to match the newer version:
+> ```hcl
+> required_providers {
+>   aws = {
+>     source  = "hashicorp/aws"
+>     version = "~> 6.0"
+>   }
+> }
+> ```
+> then clear the local provider cache and lock file before reinitializing:
+> ```bash
+> rm -rf .terraform
+> rm .terraform.lock.hcl
+> terraform init
+> ```
+
+**Verify the migration succeeded:**
+
+```bash
+terraform validate      # expect: Success! The configuration is valid.
+terraform plan           # expect: No changes. Your infrastructure matches the configuration.
+terraform state list      # confirms resources are enumerable from the remote backend
+terraform state pull      # confirms state is retrievable from the S3 backend
+```
+
+Skip this whole bootstrap on subsequent clones/machines once the backend is already configured in the repo — `terraform init` alone will pull the existing remote state.
+
+### 3. Provision the Remaining Infrastructure
+
+```bash
+terraform apply -auto-approve
+cd ..
+```
+
+### 4. Source Credentials & Execute Scanner
 
 ```bash
 # Source administrative and runner environment variables
@@ -330,7 +379,6 @@ source runner.sh
 
 # Run the complete discovery and risk analysis pipeline
 python -m nhi.risk.risk
-
 ```
 
 ---
@@ -341,9 +389,4 @@ To run the unit test suite offline using mock injection (no live AWS API calls r
 
 ```bash
 python3 -m unittest discover -s tests
-
-```
-
-```
-
 ```

@@ -46,13 +46,14 @@ def analyze_policy(policies,identityType,identityName):
                     })
             elif resources_findings:
                 for resource in resources_findings:
+                    is_scoped = resource.get("Type") == "SCOPED_PREFIX"
                     findings.append({
                     "RuleID": "IAM_02",
-                    "Severity": "HIGH",
-                    "IdentityType":identityType,
+                    "Severity": "LOW" if is_scoped else "HIGH",
+                    "IdentityType": identityType,
                     "IdentityName": identityName,
-                    "PolicyName" : policy['PolicyName'],
-                    "Finding": "Wildcard Resources",
+                    "PolicyName": policy['PolicyName'],
+                    "Finding": "Scoped Wildcard Resource Path" if is_scoped else "Wildcard Resources",
                     "Resource": resource["Resource"],
                     })
             elif actions_findings:
@@ -89,12 +90,26 @@ def analyze_actions(actions):
 def analyze_resources(resources):
     resource_findings = []
     if isinstance(resources, str):
-            if "*" in resources:
-                resource_findings.append({"Resource": resources})
-                           
+        resources_list = [resources]
     elif isinstance(resources, list):
-        for resource in resources:
-            if "*" in resource:
-                resource_findings.append({"Resource": resource})
-                break
+        resources_list = resources
+    else:
+        return resource_findings
+    
+    for resource in resources_list:
+        classification = classify_resources(resource)
+        if classification in ("UNCONSTRAINED", "SCOPED_PREFIX"):
+            resource_findings.append({"Resource": resource, "Type": classification})
+            break
     return resource_findings
+
+def classify_resources(resource):
+    if not isinstance(resource, str):
+        return None
+    if resource == "*" or resource == "arn:aws:*:*:*:*":
+         return "UNCONSTRAINED"
+    if "*" in resource:
+        if resource.startswith("arn:aws:") and not resource.startswith("arn:aws:*:"):
+            return "SCOPED_PREFIX"
+        return "UNCONSTRAINED"
+    return "SPECIFIC"

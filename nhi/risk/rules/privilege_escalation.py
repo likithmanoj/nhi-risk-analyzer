@@ -145,15 +145,34 @@ def analyze_actions_for_privilege_escalation(actions, check):
 def analyze_resources_for_privilege_escalation(resources):
     resource_findings = []
     if isinstance(resources, str):
-            if "*" in resources:
-                resource_findings.append({"Resource": resources})
+        resources_list = [resources]
                            
     elif isinstance(resources, list):
-        for resource in resources:
-            if "*" in resource:
-                resource_findings.append({"Resource": resource})
-                break
+        resources_list = resources
+    for resource in resources_list:
+        classification = classify_resources_for_privilege_escalation(resource)
+        if classification in ("UNCONSTRAINED","SCOPED_PREFIX"):
+            resource_findings.append({"Resource": resource, "Type": classification})
+            break
     return resource_findings
+
+def classify_resources_for_privilege_escalation(resource):
+    if not isinstance(resource, str):
+        return None
+    if resource == "*" or resource == "arn:aws:*:*:*:*":
+         return "UNCONSTRAINED"
+    if resource.startswith("arn:aws:iam::*"):
+        # Format: arn:aws:iam::<account>:<type>/<name>
+        parts = resource.split(":", 5)
+        if len(parts) == 6 and "/" in parts[5]:
+            resource_type, resource_name = parts[5].split("/",1)
+            if resource_name == '*':
+                return "UNCONSTRAINED" # role/*, policy/*, user/*, group/* — no real scoping
+    if "*" in resource:
+        if resource.startswith("arn:aws:") and not resource.startswith("arn:aws:*:"):
+            return "SCOPED_PREFIX"
+        return "UNCONSTRAINED"
+    return "SPECIFIC"
 
 def has_passed_to_service_condition(condition_block):
     if not condition_block or not isinstance(condition_block, dict):
