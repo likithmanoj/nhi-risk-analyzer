@@ -1,0 +1,61 @@
+# nhi-ignore.yaml
+# Production exemption list for nhi-risk-analyzer remediation engine
+
+exemptions:
+  # ---------------------------------------------------------------------------
+  # 1. USER EXEMPTIONS
+  # ---------------------------------------------------------------------------
+  users:
+    # Infrastructure Admin / Provisioner (Has AdministratorAccess / FullAccess)
+    - name: "pam-suite-admin"
+      rules:
+        - "*"  # Blanket exemption: Do not touch admin policies or keys
+
+    # Core Automation Runner User
+    - name: "nhi-automation-runner-dev"
+      rules:
+        - "IAM_11"  # Exempt key from stale alerts during dev cycles
+        - "IAM_12"  # Exempt key from unused alert
+
+    # IaC Provisioning Service Account
+    - name: "terraform"
+      rules:
+        - "IAM_11"
+        - "IAM_12"
+
+  # ---------------------------------------------------------------------------
+  # 2. ROLE EXEMPTIONS
+  # ---------------------------------------------------------------------------
+  roles:
+    # Critical Pipeline Role assumed by automation user
+    - name: "nhi-automation-runner-role-dev"
+      rules:
+        - "*"  # Protect execution role from policy modification diffs
+
+    # AWS Service-Linked Roles (AWS-managed, cannot be altered via standard IAM)
+    - name: "AWSServiceRoleForAccessAnalyzer"
+      rules:
+        - "*"
+    - name: "AWSServiceRoleForResourceExplorer"
+      rules:
+        - "*"
+    - name: "AWSServiceRoleForSupport"
+      rules:
+        - "*"
+    - name: "AWSServiceRoleForTrustedAdvisor"
+      rules:
+        - "*"
+
+  # ---------------------------------------------------------------------------
+  # 3. ACCESS KEY EXEMPTIONS
+  # ---------------------------------------------------------------------------
+  access_keys:
+    # Active Access Key for pam-suite-admin
+    - id: "AKIAZKOSRT7HRT3MTZ7L"
+      rules:
+        - "*"
+
+    # Dev Automation Runner Key
+    - id: "AKIAZKOSRT7HWQ5SPJ2C"
+      rules:
+        - "IAM_12"
