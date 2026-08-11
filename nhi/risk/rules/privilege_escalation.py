@@ -161,7 +161,7 @@ def classify_resources_for_privilege_escalation(resource):
         return None
     if resource == "*" or resource == "arn:aws:*:*:*:*":
          return "UNCONSTRAINED"
-    if resource.startswith("arn:aws:iam::*"):
+    if resource.startswith("arn:aws:iam::"):
         # Format: arn:aws:iam::<account>:<type>/<name>
         parts = resource.split(":", 5)
         if len(parts) == 6 and "/" in parts[5]:
