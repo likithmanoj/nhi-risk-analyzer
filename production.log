@@ -1,2 +1,9 @@
 2026-08-12 10:50:06,575 [INFO] nhi.remediation.config: Skipping User 'pam-suite-admin' for rule 'IAM_02' (nhi-ignore exemption).
 2026-08-12 10:50:06,577 [INFO] nhi.remediation.config: Skipping Access Key 'AKIAZKOSRT7HWQ5SPJ2C' for rule 'IAM_12' (nhi-ignore exemption).
+2026-08-13 01:55:07,142 [INFO] nhi.remediation.handlers.credential: [DRY-RUN] Would deactivate key AKIA1111111111EXAMPLE for user app-service-user
+2026-08-13 01:55:07,142 [ERROR] nhi.remediation.handlers.credential: Malformed finding missing required identity or target ID: {'RuleID': 'IAM_11', 'IdentityType': 'user', 'IdentityName': 'broken-user-payload', 'Description': 'Missing TargetID field'}
+2026-08-13 01:55:07,142 [INFO] nhi.remediation.handlers.credential: [DRY-RUN] Would deactivate key AKIA2222222222EXAMPLE for user admin-break-glass
+2026-08-13 01:58:25,900 [INFO] nhi.remediation.handlers.credential: [DRY-RUN] Would deactivate key AKIA1111111111EXAMPLE for user app-service-user
+2026-08-13 01:58:25,900 [ERROR] nhi.remediation.handlers.credential: Malformed finding missing required identity or target ID: {'RuleID': 'IAM_11', 'IdentityType': 'user', 'IdentityName': 'broken-user-payload', 'Description': 'Missing TargetID field'}
+2026-08-13 01:58:25,900 [INFO] nhi.remediation.config: Skipping User 'pam-suite-admin' for rule 'IAM_11' (nhi-ignore exemption).
+2026-08-13 01:58:25,900 [INFO] nhi.remediation.dispatch: This finding was found to be ignored:{'RuleID': 'IAM_11', 'IdentityType': 'user', 'IdentityName': 'pam-suite-admin', 'TargetID': 'AKIA2222222222EXAMPLE', 'Description': 'Exempted user account'}

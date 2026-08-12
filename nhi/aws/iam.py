@@ -143,4 +143,11 @@ def get_access_key_last_used(access_key_id: str) -> dict:
             "ServiceName": "N/A",
             "Region": "N/A"
         }
+def update_access_key(userName,accessKeyId,status):
+    try:
+        iam_client = get_session().client('iam')
+        response = iam_client.update_access_key(UserName = userName, AccessKeyId = accessKeyId, Status = status)
+        return response.get('ResponseMetadata')
+    except ClientError as e:
+        logger.error(f"User status not changed for key {userName} {accessKeyId}: {e}")
    
