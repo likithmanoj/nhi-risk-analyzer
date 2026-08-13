@@ -31,12 +31,9 @@ def load_ignore_config(config_path = 'nhi-ignore.yaml'):
             "ignore_access_keys" : exemptions.get('access_keys') or []
             }
             return response
-    except yaml.YAMLError:
-            logger.error("Check nhi-ignore.yaml file, something is buggy!")
-            return default_config
-    except FileNotFoundError:
-            logger.error("File not found! Check nhi-ignore.yaml or run it in its directory")
-            return default_config
+    except (FileNotFoundError, yaml.YAMLError) as e:
+        logger.critical(f"Safety config failed to load: {e}")
+        raise RuntimeError('Safety config failed to load in nhi/remediation/config') from e
 
 
 def is_ignored(finding: dict, ignore_config: dict) -> bool:

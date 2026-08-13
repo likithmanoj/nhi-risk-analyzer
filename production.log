@@ -7,3 +7,4 @@
 2026-08-13 01:58:25,900 [ERROR] nhi.remediation.handlers.credential: Malformed finding missing required identity or target ID: {'RuleID': 'IAM_11', 'IdentityType': 'user', 'IdentityName': 'broken-user-payload', 'Description': 'Missing TargetID field'}
 2026-08-13 01:58:25,900 [INFO] nhi.remediation.config: Skipping User 'pam-suite-admin' for rule 'IAM_11' (nhi-ignore exemption).
 2026-08-13 01:58:25,900 [INFO] nhi.remediation.dispatch: This finding was found to be ignored:{'RuleID': 'IAM_11', 'IdentityType': 'user', 'IdentityName': 'pam-suite-admin', 'TargetID': 'AKIA2222222222EXAMPLE', 'Description': 'Exempted user account'}
+2026-08-13 11:27:00,085 [CRITICAL] nhi.remediation.config: Safety config failed to load: [Errno 2] No such file or directory: 'nhi-ignor.yaml'
