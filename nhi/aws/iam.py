@@ -1,5 +1,4 @@
 #iam.py is responsible for encapsulating all AWS IAM operations required by the NHI platform while hiding the underlying boto3 IAM implementation from the rest of the application.
-
 from nhi.aws.session import get_session
 from botocore.exceptions import ClientError
 import logging
@@ -143,4 +142,26 @@ def get_access_key_last_used(access_key_id: str) -> dict:
             "ServiceName": "N/A",
             "Region": "N/A"
         }
-   
+def update_access_key(userName,accessKeyId,status):
+    try:
+        iam_client = get_session().client('iam')
+        response = iam_client.update_access_key(UserName = userName, AccessKeyId = accessKeyId, Status = status)
+        return response.get('ResponseMetadata')
+    except ClientError as e:
+        logger.error(f"User status not changed for key {userName} {accessKeyId}: {e}")
+def set_user_permissions_boundary(user_name: str, boundary_arn: str) -> bool:
+    try:
+        iam_client = get_session().client('iam')
+        iam_client.put_user_permissions_boundary(UserName = user_name,PermissionsBoundary = boundary_arn)
+        return True
+    except ClientError as e:
+        logger.error(f"User permission boundary not attached {user_name} to {boundary_arn}: {e}")
+        return False
+def set_role_permissions_boundary(role_name: str, boundary_arn: str) -> bool:
+    try:
+        iam_client = get_session().client('iam')
+        iam_client.put_role_permissions_boundary(UserName = role_name,PermissionsBoundary = boundary_arn)
+        return True
+    except ClientError as e:
+        logger.error(f"Role permission boundary not attached {role_name} to {boundary_arn}: {e}")
+        return False
