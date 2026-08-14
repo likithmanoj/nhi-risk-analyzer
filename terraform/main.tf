@@ -146,3 +146,28 @@ resource "aws_iam_role_policy_attachment" "nhi_automation_runner_role_attachment
   role       = aws_iam_role.nhi_automation_runner_role.name
   policy_arn = aws_iam_policy.role_policy.arn
 }
+
+data "aws_iam_policy_document" "permissions_boundary_policy_document" {
+  statement {
+    sid    = "DenyPermissionsForBoundaryPolicy"
+    effect = "Deny"
+    actions = ["iam:DeleteUserPermissionsBoundary",
+      "iam:DeleteRolePermissionsBoundary",
+      "iam:PutUserPermissionsBoundary",
+    "iam:PutRolePermissionsBoundary"]
+    resources = ["*"]
+  }
+  statement {
+    sid       = "AllowForDenyPermissionsBoundary"
+    effect    = "Allow"
+    actions   = ["*"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "permissions_boundary_policy" {
+  name        = "nhi-permissions-boundary"
+  path        = "/"
+  description = "Permissions boundary ceiling applied by NHI automated remediation"
+  policy      = data.aws_iam_policy_document.permissions_boundary_policy_document.json
+}

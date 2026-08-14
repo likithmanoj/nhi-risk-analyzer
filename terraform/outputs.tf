@@ -16,3 +16,7 @@ output "nhi_automation_runner_secret_access_key" {
 output "nhi_automation_runner_role_arn" {
   value = aws_iam_role.nhi_automation_runner_role.arn
 }
+output "permissions_boundary_policy_arn" {
+  description = "ARN of the NHI Permissions Boundary policy"
+  value       = aws_iam_policy.permissions_boundary_policy.arn
+}
