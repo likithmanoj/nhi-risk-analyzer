@@ -1,3 +1,4 @@
+import argparse
 from nhi.services.inventory import create_inventory
 from nhi.risk.rules.wildcards import analyze_policy, analyze_admin_access
 from nhi.risk.rules.credentials import analyze_stale_access_keys, analyze_unused_keys
@@ -8,6 +9,7 @@ from nhi.risk.rules.privilege_escalation import (
     analyze_access_key_creation_escalation,             # IAM_07
     analyze_console_access_escalation,                 # IAM_08
 )
+from nhi.remediation.dispatch import dispatch_remediation
 
 
 def run_privilege_escalation_checks(policies, identity_type, identity_name):
@@ -90,5 +92,39 @@ def analyze_inventory():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="NHI Risk Analyzer & Remediation Engine for AWS")
+    
+    # Mutually exclusive execution options
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate remediation actions without making changes in AWS",
+    )
+    group.add_argument(
+        "--remediate",
+        action="store_true",
+        help="Execute live remediation against detected findings",
+    )
+    
+    args = parser.parse_args()
+
+    print("[*] Running inventory and risk evaluation...")
     all_findings = analyze_inventory()
-    print(all_findings)
+    print(f"[*] Findings detected: {len(all_findings)}")
+
+    # 1. LIVE REMEDIATION
+    if args.remediate:
+        print("[!] Executing LIVE remediation...")
+        stats = dispatch_remediation(all_findings, dry_run=False)
+        print("Live Remediation Stats:", stats)
+
+    # 2. DRY RUN SIMULATION
+    elif args.dry_run:
+        print("[*] Executing DRY RUN simulation...")
+        stats = dispatch_remediation(all_findings, dry_run=True)
+        print("Dry Run Stats:", stats)
+
+    # 3. SCAN ONLY (DEFAULT)
+    else:
+        print("[*] Scan complete. (Pass --dry-run to simulate containment or --remediate to execute live)")

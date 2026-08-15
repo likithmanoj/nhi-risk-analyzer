@@ -41,9 +41,10 @@ def dispatch_remediation(findings: list, dry_run: bool = True) -> dict:
       except Exception as e:
         logger.exception(f"Failed to remediate finding for RuleID '{rule_id}': {e}")
         failed += 1      
-    return{
+    action_key = "would_remediate" if dry_run else "remediated"
+    return {
         "total": len(findings),
-        "remediated": remediated,
+        action_key: remediated,
         "skipped": skipped,
         "failed": failed,
-        }
+    }

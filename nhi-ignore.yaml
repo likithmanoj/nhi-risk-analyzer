@@ -1,61 +1,54 @@
-# nhi-ignore.yaml
-# Production exemption list for nhi-risk-analyzer remediation engine
-
+version: "1.0"
 exemptions:
-  # ---------------------------------------------------------------------------
-  # 1. USER EXEMPTIONS
-  # ---------------------------------------------------------------------------
+  # ============================================================================
+  # 1. CORE ADMINISTRATOR & PIPELINE USERS
+  # ============================================================================
   users:
-    # Infrastructure Admin / Provisioner (Has AdministratorAccess / FullAccess)
+    # Break-glass administrator
     - name: "pam-suite-admin"
-      rules:
-        - "*"  # Blanket exemption: Do not touch admin policies or keys
+      reason: "Emergency break-glass administrator identity; exempt from automated boundaries"
+      rules: ["*"]
 
-    # Core Automation Runner User
-    - name: "nhi-automation-runner-dev"
-      rules:
-        - "IAM_11"  # Exempt key from stale alerts during dev cycles
-        - "IAM_12"  # Exempt key from unused alert
-
-    # IaC Provisioning Service Account
+    # IaC Provisioner
     - name: "terraform"
-      rules:
-        - "IAM_11"
-        - "IAM_12"
+      reason: "Terraform automation deployment user; needs unrestricted resource provisioning"
+      rules: ["*"]
 
-  # ---------------------------------------------------------------------------
-  # 2. ROLE EXEMPTIONS
-  # ---------------------------------------------------------------------------
+    # NHI Automation Runner User
+    - name: "nhi-automation-runner-dev"
+      reason: "Execution identity for NHI scanner; must avoid self-containment"
+      rules: ["*"]
+
+  # ============================================================================
+  # 2. AUTOMATION & AWS SERVICE-LINKED ROLES
+  # ============================================================================
   roles:
-    # Critical Pipeline Role assumed by automation user
+    # Scanner Execution Role
     - name: "nhi-automation-runner-role-dev"
-      rules:
-        - "*"  # Protect execution role from policy modification diffs
+      reason: "Assumed role for inventory collection, S3 export, and remediation dispatcher"
+      rules: ["*"]
 
-    # AWS Service-Linked Roles (AWS-managed, cannot be altered via standard IAM)
+    # AWS Service-Linked Roles (AWS-managed, boundary attachment unsupported)
     - name: "AWSServiceRoleForAccessAnalyzer"
-      rules:
-        - "*"
+      reason: "AWS Service-Linked Role"
+      rules: ["*"]
+
     - name: "AWSServiceRoleForResourceExplorer"
-      rules:
-        - "*"
+      reason: "AWS Service-Linked Role"
+      rules: ["*"]
+
     - name: "AWSServiceRoleForSupport"
-      rules:
-        - "*"
+      reason: "AWS Service-Linked Role"
+      rules: ["*"]
+
     - name: "AWSServiceRoleForTrustedAdvisor"
-      rules:
-        - "*"
+      reason: "AWS Service-Linked Role"
+      rules: ["*"]
 
-  # ---------------------------------------------------------------------------
-  # 3. ACCESS KEY EXEMPTIONS
-  # ---------------------------------------------------------------------------
-  access_keys:
-    # Active Access Key for pam-suite-admin
-    - id: "AKIAZKOSRT7HRT3MTZ7L"
-      rules:
-        - "*"
-
-    # Dev Automation Runner Key
-    - id: "AKIAZKOSRT7HWQ5SPJ2C"
-      rules:
-        - "IAM_12"
+  # ============================================================================
+  # 3. IAM GROUPS
+  # ============================================================================
+  groups:
+    - name: "test-group"
+      reason: "IAM groups do not support Permissions Boundaries in AWS IAM APIs"
+      rules: ["*"]
