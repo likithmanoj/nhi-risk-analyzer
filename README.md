@@ -1,4 +1,3 @@
-```markdown
 # NHI Risk Analyzer for AWS
 
 An offline-first security automation platform that discovers, inventories, analyzes, risk-assesses, and safely remediates **Non-Human Identities (NHIs)** — IAM users, groups, roles, and associated policies — across AWS environments.
@@ -491,6 +490,8 @@ terraform validate      # expect: Success! The configuration is valid.
 terraform plan           # expect: No changes. Your infrastructure matches the configuration.
 terraform state list      # confirms resources are enumerable from the remote backend
 terraform state pull      # confirms state is retrievable from the S3 backend
+
+cd ..
 ```
 
 Skip this whole bootstrap on subsequent clones/machines once the backend is already configured in the repo — `terraform init` alone will pull the existing remote state.
@@ -530,6 +531,4 @@ To run the full unit test suite offline without live AWS API dependencies:
 
 ```bash
 python -m pytest -v tests/
-```
-
 ```
