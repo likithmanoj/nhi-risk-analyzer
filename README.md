@@ -422,7 +422,7 @@ nhi-risk-analyzer/
 ### 1. Clone & Setup Virtual Environment
 
 ```bash
-git clone [https://github.com/likithmanoj/nhi-risk-analyzer.git](https://github.com/likithmanoj/nhi-risk-analyzer.git)
+git clone https://github.com/likithmanoj/nhi-risk-analyzer.git
 cd nhi-risk-analyzer
 
 python3 -m venv .venv
