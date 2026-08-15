@@ -95,87 +95,19 @@ To eliminate redundant AWS STS authentication calls during inventory collection,
 Rule IDs are grouped by category rather than numbered strictly sequentially — `IAM_01–03` cover general policy analysis, `IAM_04–08` cover documented privilege-escalation paths, and `IAM_11–12` cover credential hygiene. `IAM_09–10` are reserved for planned trust-policy analysis.
 
 | Rule ID | Name | Category | Severity | Status | Remediation Action |
-| --- | --- | --- | --- | --- | --- |
-| **`IAM_01`** | Wildcard Actions in Policies
-
- | Policy Analysis
-
- | `HIGH`<br> | ✅ Implemented
-
- | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`IAM_02`** | Wildcard Resources in Policies
-
- | Policy Analysis
-
- | `HIGH` / `LOW` (scoped-prefix downgrade)
-
- | ✅ Implemented
-
- | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`IAM_03`** | Full Administrator Access
-
- | Policy Analysis
-
- | `CRITICAL`<br> | ✅ Implemented
-
- | Attach Permissions Boundary (Phase 5: Policy Detach) |
-| **`IAM_04`** | Privilege Escalation via `iam:PassRole`<br> | Privilege Escalation
-
- | `HIGH`<br> | ✅ Implemented
-
- | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_05`** | Privilege Escalation via `iam:CreatePolicyVersion`<br> | Privilege Escalation
-
- | `CRITICAL`<br> | ✅ Implemented
-
- | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`)
-
- | Privilege Escalation
-
- | `CRITICAL`<br> | ✅ Implemented
-
- | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_07`** | Privilege Escalation via `iam:CreateAccessKey`<br> | Privilege Escalation
-
- | `CRITICAL`<br> | ✅ Implemented
-
- | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`)
-
- | Privilege Escalation
-
- | `CRITICAL`<br> | ✅ Implemented
-
- | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_09`** | Permissive Role Trust Policies
-
- | Trust Analysis
-
- | `HIGH`<br> | 📋 Planned
-
- | Alert / Reporting Only |
-| **`IAM_10`** | Unrestricted `sts:AssumeRole` Execution
-
- | Privilege Escalation
-
- | `HIGH` / `CRITICAL`<br> | 📋 Planned
-
- | Alert / Reporting Only |
-| **`IAM_11`** | Stale Access Keys (>90 Days Old)
-
- | Credential Security
-
- | `HIGH` / `LOW`<br> | ✅ Implemented
-
- | Deactivate Key (`Status: Inactive`) |
-| **`IAM_12`** | Unused & Dormant Access Keys (>30 Days)
-
- | Credential Security
-
- | `HIGH`<br> | ✅ Implemented
-
- | Deactivate Key (`Status: Inactive`) |
+|:---|:---|:---|:---|:---|:---|
+| **`IAM_01`** | Wildcard Actions in Policies | Policy Analysis | `HIGH` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`IAM_02`** | Wildcard Resources in Policies | Policy Analysis | `HIGH` / `LOW` (scoped-prefix downgrade) | ✅ Implemented |
+| **`IAM_03`** | Full Administrator Access | Policy Analysis | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Phase 5: Policy Detach) |
+| **`IAM_04`** | Privilege Escalation via `iam:PassRole` | Privilege Escalation | `HIGH` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`IAM_05`** | Privilege Escalation via `iam:CreatePolicyVersion` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`IAM_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`IAM_07`** | Privilege Escalation via `iam:CreateAccessKey` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`IAM_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`IAM_09`** | Permissive Role Trust Policies | Trust Analysis | `HIGH` | 📋 Planned | Alert / Reporting Only |
+| **`IAM_10`** | Unrestricted `sts:AssumeRole` Execution | Privilege Escalation | `HIGH` / `CRITICAL` | 📋 Planned | Alert / Reporting Only |
+| **`IAM_11`** | Stale Access Keys (>90 Days Old) | Credential Security | `HIGH` / `LOW` | ✅ Implemented | Deactivate Key (`Status: Inactive`) |
+| **`IAM_12`** | Unused & Dormant Access Keys (>30 Days) | Credential Security | `HIGH` | ✅ Implemented | Deactivate Key (`Status: Inactive`) |
 
 **Detection methodology sources:** Rules are informed by Rhino Security Labs' documented AWS IAM privilege escalation research (21 methods), Salesforce's Cloudsplaining policy-severity methodology, the CIS AWS Foundations Benchmark (credential hygiene thresholds), and AWS's own IAM best-practices documentation.
 
