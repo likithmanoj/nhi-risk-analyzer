@@ -167,9 +167,18 @@ class TestDispatchRemediation:
         mock_policy_handler = MagicMock(return_value=True)
         mock_handler_map.get.side_effect = lambda rule: mock_policy_handler if rule == "IAM_01" else None
 
-        stats = dispatch_remediation(findings, dry_run=True)
+        # 1. Assert DRY-RUN returns 'would_remediate'
+        dry_run_stats = dispatch_remediation(findings, dry_run=True)
+        assert dry_run_stats == {
+            "total": 3,
+            "would_remediate": 1,
+            "skipped": 1,
+            "failed": 1
+        }
 
-        assert stats == {
+        # 2. Assert LIVE remediation returns 'remediated'
+        live_stats = dispatch_remediation(findings, dry_run=False)
+        assert live_stats == {
             "total": 3,
             "remediated": 1,
             "skipped": 1,

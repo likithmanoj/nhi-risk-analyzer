@@ -43,3 +43,4 @@ __pycache__/
 
 inventory.json
 tests.pyproduction.log
+production.log

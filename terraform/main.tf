@@ -69,7 +69,10 @@ resource "aws_iam_policy" "role_policy" {
           "iam:GetPolicy",
           "iam:GetPolicyVersion",
           "iam:ListAccessKeys",
-          "iam:GetAccessKeyLastUsed"
+          "iam:GetAccessKeyLastUsed",
+          "iam:PutUserPermissionsBoundary",
+          "iam:PutRolePermissionsBoundary",
+          "iam:UpdateAccessKey"
         ]
         Effect   = "Allow"
         Resource = "*"
