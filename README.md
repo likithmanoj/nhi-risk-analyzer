@@ -1,18 +1,18 @@
 ```markdown
 # NHI Risk Analyzer for AWS
 
-An offline-first security automation platform that discovers, inventories, analyzes, risk-assesses, and safely remediates **Non-Human Identities (NHIs)** — IAM users, groups, roles, and associated policies — across AWS environments[cite: 1].
+An offline-first security automation platform that discovers, inventories, analyzes, risk-assesses, and safely remediates **Non-Human Identities (NHIs)** — IAM users, groups, roles, and associated policies — across AWS environments[cite: 8].
 
 ---
 
 ## 📋 Overview
 
-**NHI Risk Analyzer** addresses a critical cloud security challenge: enterprise AWS environments accumulate hundreds of non-human identities (service accounts, automation roles, CI/CD credentials, cross-account roles) with minimal visibility into which identities are over-privileged, dormant, or introduce privilege-escalation risk[cite: 1].
+**NHI Risk Analyzer** addresses a critical cloud security challenge: enterprise AWS environments accumulate hundreds of non-human identities (service accounts, automation roles, CI/CD credentials, cross-account roles) with minimal visibility into which identities are over-privileged, dormant, or introduce privilege-escalation risk[cite: 8].
 
 The platform enforces strict architectural decoupling across three distinct phases:
-1. **State Collection:** Live AWS ingestion into an `inventory.json` snapshot via Boto3[cite: 1].
-2. **Offline Risk Evaluation:** Evaluating IAM security rules against the snapshot without live network dependencies[cite: 1]. This means the risk engine can be re-run, tested, and iterated on without touching AWS again, and every finding is reproducible against the exact account state it was generated from[cite: 1].
-3. **Automated Remediation & Containment:** A fail-closed containment pipeline that neutralizes dangerous escalation attack paths via Permissions Boundaries and deactivates stale/dormant credentials without causing operational microservice outages.
+1. **State Collection:** Live AWS ingestion into an `inventory.json` snapshot via Boto3[cite: 8].
+2. **Offline Risk Evaluation:** Evaluating IAM security rules against the snapshot without live network dependencies[cite: 8]. This means the risk engine can be re-run, tested, and iterated on without touching AWS again, and every finding is reproducible against the exact account state it was generated from[cite: 8].
+3. **Automated Remediation & Containment:** A fail-closed containment pipeline that neutralizes dangerous escalation attack paths via Permissions Boundaries and deactivates stale/dormant credentials without causing operational microservice outages[cite: 8].
 
 ---
 
@@ -20,14 +20,14 @@ The platform enforces strict architectural decoupling across three distinct phas
 
 Enterprise AWS environments routinely contain non-human identities that are:
 
-- **Unstandardized:** Created manually without consistent provisioning standards[cite: 1].
-- **Over-Permissioned:** Granted administrative or wildcard permissions far exceeding actual operational needs[cite: 1].
-- **Dormant & Forgotten:** Left active long after workloads or integration pipelines have been decommissioned[cite: 1].
-- **Incompletely Audited:** Carrying inline policies that bypass standard managed-policy checks[cite: 1].
-- **Credential Risks:** Utilizing access keys that are stale (>90 days old) or have never been used since inception[cite: 1].
-- **Escalation-Prone:** Holding IAM permissions that, alone or combined, allow privilege escalation to full administrator access — documented attack paths that most policy-only scanners don't check for[cite: 1].
+- **Unstandardized:** Created manually without consistent provisioning standards[cite: 8].
+- **Over-Permissioned:** Granted administrative or wildcard permissions far exceeding actual operational needs[cite: 8].
+- **Dormant & Forgotten:** Left active long after workloads or integration pipelines have been decommissioned[cite: 8].
+- **Incompletely Audited:** Carrying inline policies that bypass standard managed-policy checks[cite: 8].
+- **Credential Risks:** Utilizing access keys that are stale (>90 days old) or have never been used since inception[cite: 8].
+- **Escalation-Prone:** Holding IAM permissions that, alone or combined, allow privilege escalation to full administrator access — documented attack paths that most policy-only scanners don't check for[cite: 8].
 
-NHI Risk Analyzer automates discovery, security analysis, and targeted remediation using live AWS APIs and offline rule processing[cite: 1].
+NHI Risk Analyzer automates discovery, security analysis, and targeted remediation using live AWS APIs and offline rule processing[cite: 8].
 
 ---
 
@@ -71,6 +71,8 @@ NHI Risk Analyzer automates discovery, security analysis, and targeted remediati
 
 4. **Remediation Dispatcher (`nhi/remediation/dispatch.py`):** Routes actionable findings through safe containment handlers with fail-closed safety, dry-run simulation mode, and exemption filtering via `nhi-ignore.yaml`.
 
+
+
 ---
 
 ## ⚡ Engineering Optimizations
@@ -95,19 +97,41 @@ To eliminate redundant AWS STS authentication calls during inventory collection,
 Rule IDs are grouped by category rather than numbered strictly sequentially — `IAM_01–03` cover general policy analysis, `IAM_04–08` cover documented privilege-escalation paths, and `IAM_11–12` cover credential hygiene. `IAM_09–10` are reserved for planned trust-policy analysis.
 
 | Rule ID | Name | Category | Severity | Status | Remediation Action |
-|:---|:---|:---|:---|:---|:---|
-| **`IAM_01`** | Wildcard Actions in Policies | Policy Analysis | `HIGH` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`IAM_02`** | Wildcard Resources in Policies | Policy Analysis | `HIGH` / `LOW` (scoped-prefix downgrade) | ✅ Implemented |
-| **`IAM_03`** | Full Administrator Access | Policy Analysis | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Phase 5: Policy Detach) |
-| **`IAM_04`** | Privilege Escalation via `iam:PassRole` | Privilege Escalation | `HIGH` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_05`** | Privilege Escalation via `iam:CreatePolicyVersion` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_07`** | Privilege Escalation via `iam:CreateAccessKey` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_09`** | Permissive Role Trust Policies | Trust Analysis | `HIGH` | 📋 Planned | Alert / Reporting Only |
-| **`IAM_10`** | Unrestricted `sts:AssumeRole` Execution | Privilege Escalation | `HIGH` / `CRITICAL` | 📋 Planned | Alert / Reporting Only |
-| **`IAM_11`** | Stale Access Keys (>90 Days Old) | Credential Security | `HIGH` / `LOW` | ✅ Implemented | Deactivate Key (`Status: Inactive`) |
-| **`IAM_12`** | Unused & Dormant Access Keys (>30 Days) | Credential Security | `HIGH` | ✅ Implemented | Deactivate Key (`Status: Inactive`) |
+| --- | --- | --- | --- | --- | --- |
+| **`IAM_01`** | Wildcard Actions in Policies | Policy Analysis | `HIGH` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`)
+
+ |
+| **`IAM_02`** | Wildcard Resources in Policies | Policy Analysis | `HIGH` / `LOW` (scoped-prefix downgrade) | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`IAM_03`** | Full Administrator Access | Policy Analysis | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Phase 5: Policy Detach)
+
+ |
+| **`IAM_04`** | Privilege Escalation via `iam:PassRole` | Privilege Escalation | `HIGH` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)
+
+ |
+| **`IAM_05`** | Privilege Escalation via `iam:CreatePolicyVersion` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)
+
+ |
+| **`IAM_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)
+
+ |
+| **`IAM_07`** | Privilege Escalation via `iam:CreateAccessKey` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)
+
+ |
+| **`IAM_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)
+
+ |
+| **`IAM_09`** | Permissive Role Trust Policies | Trust Analysis | `HIGH` | 📋 Planned | Alert / Reporting Only
+
+ |
+| **`IAM_10`** | Unrestricted `sts:AssumeRole` Execution | Privilege Escalation | `HIGH` / `CRITICAL` | 📋 Planned | Alert / Reporting Only
+
+ |
+| **`IAM_11`** | Stale Access Keys (>90 Days Old) | Credential Security | `HIGH` / `LOW` | ✅ Implemented | Deactivate Key (`Status: Inactive`)
+
+ |
+| **`IAM_12`** | Unused & Dormant Access Keys (>30 Days) | Credential Security | `HIGH` | ✅ Implemented | Deactivate Key (`Status: Inactive`)
+
+ |
 
 **Detection methodology sources:** Rules are informed by Rhino Security Labs' documented AWS IAM privilege escalation research (21 methods), Salesforce's Cloudsplaining policy-severity methodology, the CIS AWS Foundations Benchmark (credential hygiene thresholds), and AWS's own IAM best-practices documentation.
 
@@ -134,9 +158,73 @@ Rule IDs are grouped by category rather than numbered strictly sequentially — 
 Rather than performing destructive and risky surgical policy rewrites in real time (which can break legitimate production applications), automated policy remediation uses **Permissions Boundary Containment**:
 
 * **Baseline Ceiling (`Allow *`):** Leaves routine operational read/write actions untouched so services do not crash.
+
+
 * **Hard Deny Guardrails:** Explicitly denies dangerous escalation actions (`iam:PutUserPermissionsBoundary`, `iam:DeleteRolePermissionsBoundary`, `iam:PassRole`, `iam:CreatePolicyVersion`, etc.).
+
+
 * **Non-Destructive Key Deactivation:** Stale and unused keys are toggled to `Inactive` rather than deleted, providing instant emergency rollback capabilities.
+
+
 * **Exemption Management:** Protected identities (break-glass roles, runner identities) are defined in `nhi-ignore.yaml` and skipped automatically.
+
+
+
+---
+
+## 🔌 Extending Detection & Remediation
+
+The architecture decouples offline rule evaluation from remediation dispatching, making it straightforward to plug in new risk rules and containment handlers.
+
+### 1. Adding a New Privilege Escalation / Risk Rule
+
+1. Create or update a rule file in `nhi/risk/rules/` (e.g., `privilege_escalation.py`).
+2. Define the detector returning standard finding payloads (`RuleID`, `IdentityType`, `IdentityName`, `Severity`, `Finding`).
+3. Register the rule call inside `nhi/risk/risk.py`.
+
+### 2. Adding a Targeted Remediation Handler
+
+1. Create a handler function inside `nhi/remediation/handlers/` with the signature:
+```python
+def handle_custom_remediation(finding: dict, dry_run: bool = True) -> bool:
+    # Return True on success / simulated success, False on failure
+
+```
+
+
+2. Map the corresponding `RuleID` to the new handler in `nhi/remediation/dispatch.py`:
+```python
+HANDLER_MAP = {
+    ...
+    "IAM_09": handle_custom_remediation,
+}
+
+```
+
+
+3. Add unit tests with mock injections under `tests/`.
+
+---
+
+## 🔮 Target Expansion Vectors (Roadmap)
+
+### Planned Privilege Escalation Rules (Rhino Security Taxonomy)
+
+* **`iam:UpdateAssumeRolePolicy`**: Modify existing role trust policies to allow self-assumption.
+* **`iam:AttachGroupPolicy` / `iam:AddUserToGroup**`: Escalate privileges via high-privilege IAM group membership.
+* **`lambda:UpdateFunctionCode` / `lambda:CreateFunction` + `iam:PassRole**`: Serverless execution role abuse.
+* **`glue:CreateDevEndpoint` / `glue:UpdateDevEndpoint**`: Escalation via AWS Glue developer service roles.
+* **`cloudformation:CreateStack`**: CloudFormation template execution role privilege escalation.
+
+### Planned Remediation Modes
+
+* **Surgical Policy Stripping (Phase 5):** Parse inline JSON policy documents and rewrite wildcard statements (`*`) to explicit, least-privilege action lists without attaching boundary ceilings.
+
+
+* **Direct Admin Policy Detachment:** Programmatically detach AWS-managed root policies (`AdministratorAccess`) for unexempted machine roles.
+
+
+* **Automated Rollback Ledger:** Record remediation actions to an S3-backed rollback journal allowing instant, one-click state reversion.
 
 ---
 
@@ -184,11 +272,22 @@ Rather than performing destructive and risky surgical policy rewrites in real ti
 
 
 * [x] **Phase 4: Automated Remediation Engine (Containment V1)**
+
 * Permissions Boundary containment for privilege escalation and policy over-privilege (`nhi/remediation/handlers/policy.py`)
+
+
 * Non-destructive access key deactivation (`nhi/remediation/handlers/credential.py`)
+
+
 * Dispatch pipeline with `dry_run` simulation and `nhi-ignore.yaml` exemptions (`nhi/remediation/dispatch.py`)
+
+
 * Terraform permissions boundary provisioning (`terraform/main.tf`)
+
+
 * 100% offline unit test suite with `pytest` (`tests/test_remediation.py`)
+
+
 
 
 
@@ -199,8 +298,14 @@ Rather than performing destructive and risky surgical policy rewrites in real ti
 #### Phase 5: Risk Engine V2 (Surgical Remediation)
 
 * **Selective Policy Surgery:** Parse inline policy JSON documents and strip wildcard statements (`*`) down to scoped actions.
+
+
 * **Direct AdministratorAccess Detachment:** Dedicated handler for `IAM_03` to remove root-equivalent managed policies directly.
+
+
 * **IAM Group Edge-Case Handling:** Automated alerting and diff-reporting for group findings where boundaries cannot be attached.
+
+
 
 #### Phase 6: Team Communication & Event Notifications
 
@@ -329,38 +434,38 @@ The scanner execution role requires the following minimal IAM policy to inventor
 ```text
 nhi-risk-analyzer/
 ├── nhi/
-│   ├── aws/                  # Boto3 wrappers & session management[cite: 1]
-│   │   ├── iam.py            # IAM API helpers (get_access_key_last_used, set_*_boundary, update_key)[cite: 1]
-│   │   ├── s3.py             # S3 upload utilities[cite: 1]
-│   │   └── session.py        # Cached AWS session initialization[cite: 1]
+│   ├── aws/                  # Boto3 wrappers & session management[cite: 8]
+│   │   ├── iam.py            # IAM API helpers (get_access_key_last_used, set_*_boundary, update_key)[cite: 8]
+│   │   ├── s3.py             # S3 upload utilities[cite: 8]
+│   │   └── session.py        # Cached AWS session initialization[cite: 8]
 │   ├── risk/
-│   │   ├── risk.py           # Core risk engine runner[cite: 1]
-│   │   └── rules/            # Modular evaluation rules[cite: 1]
-│   │       ├── wildcards.py            # IAM_01, IAM_02, IAM_03[cite: 1]
-│   │       ├── privilege_escalation.py # IAM_04–IAM_08 (Rhino-based escalation paths)[cite: 1]
-│   │       └── credentials.py          # IAM_11, IAM_12[cite: 1]
-│   ├── remediation/          # Automated remediation engine
-│   │   ├── dispatch.py       # Handler routing & stats collection
-│   │   ├── config.py         # Exemption parser (nhi-ignore.yaml)
+│   │   ├── risk.py           # Core risk engine runner[cite: 8]
+│   │   └── rules/            # Modular evaluation rules[cite: 8]
+│   │       ├── wildcards.py            # IAM_01, IAM_02, IAM_03[cite: 8]
+│   │       ├── privilege_escalation.py # IAM_04–IAM_08 (Rhino-based escalation paths)[cite: 8]
+│   │       └── credentials.py          # IAM_11, IAM_12[cite: 8]
+│   ├── remediation/          # Automated remediation engine[cite: 8]
+│   │   ├── dispatch.py       # Handler routing & stats collection[cite: 8]
+│   │   ├── config.py         # Exemption parser (nhi-ignore.yaml)[cite: 8]
 │   │   └── handlers/
-│   │       ├── policy.py     # Boundary attachment handler (IAM_01–IAM_08)
-│   │       └── credential.py # Key deactivation handler (IAM_11–IAM_12)
+│   │       ├── policy.py     # Boundary attachment handler (IAM_01–IAM_08)[cite: 8]
+│   │       └── credential.py # Key deactivation handler (IAM_11–IAM_12)[cite: 8]
 │   ├── services/
-│   │   ├── inventory.py      # State collection & key enrichment[cite: 1]
-│   │   └── export.py         # Output export handlers[cite: 1]
-│   └── config.py             # Global threshold configurations[cite: 1]
-├── terraform/                 # Infrastructure as Code for runner & S3 bucket[cite: 1]
-│   ├── main.tf                # Runner IAM user/role, S3 bucket, boundary policy[cite: 1]
-│   ├── outputs.tf             # Terraform outputs
-│   └── remote_state.tf        # Terraform state backend bucket[cite: 1]
-├── tests/                     # Automated unit test suite[cite: 1]
-│   ├── test_credentials.py    # Rule unit tests for IAM_11 / IAM_12[cite: 1]
-│   ├── test_inventory.py      # Mock-injected inventory tests[cite: 1]
-│   └── test_remediation.py    # Mock-injected remediation engine tests
-├── nhi-ignore.yaml            # Exemption configuration file
-├── admin.sh                   # Admin credentials bootstrap (gitignored)[cite: 1]
-├── runner.sh                  # Dynamic runner credential export (gitignored)[cite: 1, 2]
-└── README.md[cite: 1]
+│   │   ├── inventory.py      # State collection & key enrichment[cite: 8]
+│   │   └── export.py         # Output export handlers[cite: 8]
+│   └── config.py             # Global threshold configurations[cite: 8]
+├── terraform/                 # Infrastructure as Code for runner & S3 bucket[cite: 8]
+│   ├── main.tf                # Runner IAM user/role, S3 bucket, boundary policy[cite: 8]
+│   ├── outputs.tf             # Terraform outputs[cite: 8]
+│   └── remote_state.tf        # Terraform state backend bucket[cite: 8]
+├── tests/                     # Automated unit test suite[cite: 8]
+│   ├── test_credentials.py    # Rule unit tests for IAM_11 / IAM_12[cite: 8]
+│   ├── test_inventory.py      # Mock-injected inventory tests[cite: 8]
+│   └── test_remediation.py    # Mock-injected remediation engine tests[cite: 8]
+├── nhi-ignore.yaml            # Exemption configuration file[cite: 8]
+├── admin.sh                   # Admin credentials bootstrap (gitignored)[cite: 8]
+├── runner.sh                  # Dynamic runner credential export (gitignored)[cite: 8]
+└── README.md[cite: 8]
 
 ```
 
@@ -418,7 +523,7 @@ terraform init
 
 Terraform detects the existing local state file and prompts:
 
-```
+```text
 Do you want to copy existing state to the new backend?
 
 ```
@@ -454,10 +559,10 @@ Answering `yes` copies the local `terraform.tfstate` into the S3 backend. From t
 **Verify the migration succeeded:**
 
 ```bash
-terraform validate      # expect: Success! The configuration is valid.[cite: 1]
-terraform plan           # expect: No changes. Your infrastructure matches the configuration.[cite: 1]
-terraform state list      # confirms resources are enumerable from the remote backend[cite: 1]
-terraform state pull      # confirms state is retrievable from the S3 backend[cite: 1]
+terraform validate      # expect: Success! The configuration is valid.[cite: 8]
+terraform plan           # expect: No changes. Your infrastructure matches the configuration.[cite: 8]
+terraform state list      # confirms resources are enumerable from the remote backend[cite: 8]
+terraform state pull      # confirms state is retrievable from the S3 backend[cite: 8]
 
 ```
 
@@ -475,10 +580,10 @@ cd ..
 ### 4. Source Credentials & Execute Discovery / Risk Analysis
 
 ```bash
-# Source dynamically generated runner credentials and boundary ARN[cite: 1, 2]
+# Source dynamically generated runner credentials and boundary ARN[cite: 8]
 source runner.sh
 
-# Run the complete discovery and risk analysis pipeline[cite: 1]
+# Run the complete discovery and risk analysis pipeline[cite: 8]
 python -m nhi.risk.risk
 
 ```
