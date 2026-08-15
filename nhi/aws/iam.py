@@ -160,7 +160,7 @@ def set_user_permissions_boundary(user_name: str, boundary_arn: str) -> bool:
 def set_role_permissions_boundary(role_name: str, boundary_arn: str) -> bool:
     try:
         iam_client = get_session().client('iam')
-        iam_client.put_role_permissions_boundary(UserName = role_name,PermissionsBoundary = boundary_arn)
+        iam_client.put_role_permissions_boundary(RoleName = role_name,PermissionsBoundary = boundary_arn)
         return True
     except ClientError as e:
         logger.error(f"Role permission boundary not attached {role_name} to {boundary_arn}: {e}")
