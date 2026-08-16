@@ -120,11 +120,6 @@ def analyze_console_access_escalation(policies, identityType, identityName): #IA
   
 
 def analyze_actions_for_privilege_escalation(actions, check):
- 
-    # Only matches if:
-    #   1. Action is full wildcard '*'
-    #   2. Action is full IAM wildcard 'iam:*'
-    #   3. Action explicitly contains or matches the target 'check' string
     action_findings = []
     
     if isinstance(actions, str):
@@ -167,7 +162,7 @@ def classify_resources_for_privilege_escalation(resource):
         if len(parts) == 6 and "/" in parts[5]:
             resource_type, resource_name = parts[5].split("/",1)
             if resource_name == '*':
-                return "UNCONSTRAINED" # role/*, policy/*, user/*, group/* — no real scoping
+                return "UNCONSTRAINED"
     if "*" in resource:
         if resource.startswith("arn:aws:") and not resource.startswith("arn:aws:*:"):
             return "SCOPED_PREFIX"
@@ -177,8 +172,6 @@ def classify_resources_for_privilege_escalation(resource):
 def has_passed_to_service_condition(condition_block):
     if not condition_block or not isinstance(condition_block, dict):
         return False
-
-    # Loop through operator keys (e.g., 'StringEquals', 'StringLike')
     for operator, criteria in condition_block.items():
         if isinstance(criteria, dict) and "iam:PassedToService" in criteria:
             return True

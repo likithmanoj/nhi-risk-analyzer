@@ -3,7 +3,7 @@ import logging
 import sys
 
 logging.basicConfig(
-    level=logging.INFO, # Use INFO in production to capture info, warnings, and errors
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
         logging.StreamHandler(sys.stderr),  # Direct errors to standard error stream
@@ -51,19 +51,19 @@ def is_ignored(finding: dict, ignore_config: dict) -> bool:
     if not isinstance(finding, dict) or not isinstance(ignore_config, dict):
         return False
 
-    # Safely extract core fields
+    
     rule_id = finding.get("RuleID")
     identity_type = (finding.get("IdentityType") or "").lower()
     identity_name = finding.get("IdentityName")
     target_id = finding.get("TargetID")
 
-    # Internal helper to evaluate wildcard '*' or specific RuleID matches
+    
     def _rule_matches(exempted_rules: list) -> bool:
         if not isinstance(exempted_rules, list):
             return False
         return "*" in exempted_rules or rule_id in exempted_rules
 
-    # 1. Check User Exemptions
+   
     if identity_type == "user":
         ignore_users = ignore_config.get("ignore_users") or []
         for user in ignore_users:
@@ -73,7 +73,7 @@ def is_ignored(finding: dict, ignore_config: dict) -> bool:
                 )
                 return True
 
-    # 2. Check Role Exemptions
+    
     elif identity_type == "role":
         ignore_roles = ignore_config.get("ignore_roles") or []
         for role in ignore_roles:
@@ -83,7 +83,7 @@ def is_ignored(finding: dict, ignore_config: dict) -> bool:
                 )
                 return True
 
-    # 3. Check Group Exemptions
+  
     elif identity_type == "group":
         ignore_groups = ignore_config.get("ignore_groups") or []
         for group in ignore_groups:
@@ -93,7 +93,7 @@ def is_ignored(finding: dict, ignore_config: dict) -> bool:
                 )
                 return True
 
-    # 4. Check Access Key / Resource Exemptions (if TargetID exists)
+   
     if target_id:
         ignore_access_keys = ignore_config.get("ignore_access_keys") or []
         for key in ignore_access_keys:
@@ -103,7 +103,7 @@ def is_ignored(finding: dict, ignore_config: dict) -> bool:
                 )
                 return True
 
-    # Default fallback: No rules matched, proceed with remediation
+    
     return False 
       
 

@@ -50,7 +50,6 @@ def analyze_unused_keys(user_access_keys, user_name):
             'KeyStatus': key.get('Status'),
         })
 
-    # Branch 2: Key was NEVER used -> Calculate age from CreateDate
     else:
       create_dt = datetime.fromisoformat(str(key['CreateDate']))
       key_age = (now - create_dt).days

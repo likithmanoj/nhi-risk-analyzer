@@ -32,59 +32,38 @@ def analyze_inventory():
 
     findings = []
 
-    # ---------------------------------------------------------
-    # 1. USER ANALYSIS
-    # ---------------------------------------------------------
     for user in users:
         username = user['UserName']
         attached = user.get('AttachedPolicies', [])
         inline = user.get('InlinePolicies', [])
-        access_keys = user.get('AccessKeys', [])
-
-        # Policy & Admin Checks
+        access_keys = user.get('AccessKeys', [])      
         findings.extend(analyze_policy(attached, "User", username))
         findings.extend(analyze_policy(inline, "User", username))
-        findings.extend(analyze_admin_access(attached, "User", username))
-
-        # Credential Checks
+        findings.extend(analyze_admin_access(attached, "User", username))       
         findings.extend(analyze_stale_access_keys(access_keys, username))
-        findings.extend(analyze_unused_keys(access_keys, username))
-
-        # Privilege Escalation Checks (IAM_04 through IAM_08)
+        findings.extend(analyze_unused_keys(access_keys, username))     
         findings.extend(run_privilege_escalation_checks(attached, "User", username))
         findings.extend(run_privilege_escalation_checks(inline, "User", username))
 
-    # ---------------------------------------------------------
-    # 2. GROUP ANALYSIS
-    # ---------------------------------------------------------
+
     for group in groups:
         group_name = group['GroupName']
         attached = group.get('AttachedPolicies', [])
-        inline = group.get('InlinePolicies', [])
-
-        # Policy & Admin Checks
+        inline = group.get('InlinePolicies', [])      
         findings.extend(analyze_policy(attached, "Group", group_name))
         findings.extend(analyze_policy(inline, "Group", group_name))
-        findings.extend(analyze_admin_access(attached, "Group", group_name))
-
-        # Privilege Escalation Checks (IAM_04 through IAM_08)
+        findings.extend(analyze_admin_access(attached, "Group", group_name))     
         findings.extend(run_privilege_escalation_checks(attached, "Group", group_name))
         findings.extend(run_privilege_escalation_checks(inline, "Group", group_name))
 
-    # ---------------------------------------------------------
-    # 3. ROLE ANALYSIS
-    # ---------------------------------------------------------
+
     for role in roles:
         role_name = role['RoleName']
         attached = role.get('AttachedPolicies', [])
-        inline = role.get('InlinePolicies', [])
-
-        # Policy & Admin Checks
+        inline = role.get('InlinePolicies', [])        
         findings.extend(analyze_policy(attached, "Role", role_name))
         findings.extend(analyze_policy(inline, "Role", role_name))
-        findings.extend(analyze_admin_access(attached, "Role", role_name))
-
-        # Privilege Escalation Checks (IAM_04 through IAM_08)
+        findings.extend(analyze_admin_access(attached, "Role", role_name))        
         findings.extend(run_privilege_escalation_checks(attached, "Role", role_name))
         findings.extend(run_privilege_escalation_checks(inline, "Role", role_name))
 
@@ -111,20 +90,15 @@ if __name__ == "__main__":
 
     print("[*] Running inventory and risk evaluation...")
     all_findings = analyze_inventory()
-    print(f"[*] Findings detected: {len(all_findings)}")
-
-    # 1. LIVE REMEDIATION
+    print(f"[*] Findings detected: {len(all_findings)}")   
     if args.remediate:
         print("[!] Executing LIVE remediation...")
         stats = dispatch_remediation(all_findings, dry_run=False)
         print("Live Remediation Stats:", stats)
-
-    # 2. DRY RUN SIMULATION
     elif args.dry_run:
         print("[*] Executing DRY RUN simulation...")
         stats = dispatch_remediation(all_findings, dry_run=True)
         print("Dry Run Stats:", stats)
 
-    # 3. SCAN ONLY (DEFAULT)
     else:
         print("[*] Scan complete. (Pass --dry-run to simulate containment or --remediate to execute live)")
