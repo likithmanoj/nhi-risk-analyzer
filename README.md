@@ -532,3 +532,9 @@ To run the full unit test suite offline without live AWS API dependencies:
 ```bash
 python -m pytest -v tests/
 ```
+
+---
+
+## 📄 License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)** - see the [LICENSE](LICENSE) file for details. Under AGPLv3, any modifications or network services (SaaS) built using this software must also make their complete source code publicly available under the same license terms.
