@@ -1,6 +1,7 @@
 from nhi.remediation.config import (load_ignore_config, is_ignored)
 from nhi.remediation.handlers.policy import handle_policy_remediation
 from nhi.remediation.handlers.credential import handle_credential_remediation
+from nhi.remediation.handlers.tags import remediate_missing_tags
 import logging
 
 HANDLER_MAP = {
@@ -14,6 +15,7 @@ HANDLER_MAP = {
     "IAM_08": handle_policy_remediation,
     "IAM_11": handle_credential_remediation,
     "IAM_12": handle_credential_remediation,
+    "TAG_01": remediate_missing_tags
 }
 
 logger = logging.getLogger(__name__)
