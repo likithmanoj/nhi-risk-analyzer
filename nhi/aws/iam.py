@@ -164,3 +164,40 @@ def set_role_permissions_boundary(role_name: str, boundary_arn: str) -> bool:
     except ClientError as e:
         logger.error(f"Role permission boundary not attached {role_name} to {boundary_arn}: {e}")
         return False
+def list_user_tags(username: str) -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        response = iam_client.list_user_tags(UserName=username)
+        return response.get('Tags', [])
+    except ClientError as e:
+        logger.warning(f"Failed to fetch tags for user {username}: {e}")
+        return []
+
+def list_role_tags(rolename: str) -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        response = iam_client.list_role_tags(RoleName=rolename)
+        return response.get('Tags', [])
+    except ClientError as e:
+        logger.warning(f"Failed to fetch tags for role {rolename}: {e}")
+        return []
+def tag_user(username: str, tags: list)-> bool:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        response = iam_client.tag_user(Tags = tags, UserName = username)
+        return True
+    except ClientError as e:
+            logger.warning(f"Failed to update tags for user which was untagged {username}: {e}")
+            return False
+def tag_role(rolename: str, tags: list)-> bool:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        response = iam_client.tag_user(Tags = tags, RoleName = rolename)
+        return True
+    except ClientError as e:
+            logger.warning(f"Failed to update tags for user which was untagged {rolename}: {e}")
+            return False

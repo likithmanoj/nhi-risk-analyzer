@@ -21,6 +21,7 @@ def create_inventory():
         user["AccessKeys"] = iam.get_access_keys(user['UserName'])
         for key in user['AccessKeys']:
             key['AccessKeyLastUsed'] = iam.get_access_key_last_used(key['AccessKeyId'])
+        user['Tags'] = iam.list_user_tags(user['UserName'])
 
     for role in roles:
         role['AttachedPolicies'] = iam.list_attached_role_policies(role['RoleName'])
@@ -34,6 +35,7 @@ def create_inventory():
             roleInlinepolicyList.append(iam.get_role_inline_policy(role['RoleName'],policy))
         role['InlinePolicies'] = roleInlinepolicyList
         role['TrustPolicy'] = iam.get_role_trust_policy(role['RoleName'])
+        role['Tags'] = iam.list_role_tags(role['RoleName'])
 
     for group in groups:
         group['AttachedPolicies'] = iam.list_attached_group_policies(group['GroupName'])

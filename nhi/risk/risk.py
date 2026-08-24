@@ -10,6 +10,7 @@ from nhi.risk.rules.privilege_escalation import (
     analyze_console_access_escalation,                 # IAM_08
 )
 from nhi.remediation.dispatch import dispatch_remediation
+from nhi.risk.rules.tags import analyze_mandatory_tags
 
 
 def run_privilege_escalation_checks(policies, identity_type, identity_name):
@@ -44,6 +45,7 @@ def analyze_inventory():
         findings.extend(analyze_unused_keys(access_keys, username))     
         findings.extend(run_privilege_escalation_checks(attached, "User", username))
         findings.extend(run_privilege_escalation_checks(inline, "User", username))
+        findings.extend(analyze_mandatory_tags(user, "User"))
 
 
     for group in groups:
@@ -66,6 +68,7 @@ def analyze_inventory():
         findings.extend(analyze_admin_access(attached, "Role", role_name))        
         findings.extend(run_privilege_escalation_checks(attached, "Role", role_name))
         findings.extend(run_privilege_escalation_checks(inline, "Role", role_name))
+        findings.extend(analyze_mandatory_tags(role, "Role"))
 
     return findings
 
@@ -73,7 +76,6 @@ def analyze_inventory():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="NHI Risk Analyzer & Remediation Engine for AWS")
     
-    # Mutually exclusive execution options
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--dry-run",
