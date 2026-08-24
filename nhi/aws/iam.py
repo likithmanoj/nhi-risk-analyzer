@@ -2,125 +2,189 @@ from nhi.aws.session import get_session
 from botocore.exceptions import ClientError
 import logging
 logger = logging.getLogger(__name__)
-def list_users():
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_users')
-    users = []
-    for page in paginator.paginate():
-        users.extend(page['Users'])
-    return users
-def list_roles():
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_roles')
-    roles = []
-    for page in paginator.paginate():
-        roles.extend(page['Roles'])
-    return roles
-def list_groups():
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_groups')
-    groups = []
-    for page in paginator.paginate():
-        groups.extend(page['Groups'])
-    return groups
-def list_policies():
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_policies')
-    policies = []
-    for page in paginator.paginate():
-        policies.extend(page['Policies'])
-    return policies
-def list_attached_user_policies(username):
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_attached_user_policies')
-    user_attached_policies = []
-    for page in paginator.paginate(UserName = username):
-        user_attached_policies.extend(page['AttachedPolicies'])
-    return user_attached_policies
-def list_attached_role_policies(rolename):
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_attached_role_policies')
-    role_attached_policies = []
-    for page in paginator.paginate(RoleName = rolename):
-        role_attached_policies.extend(page['AttachedPolicies'])
-    return role_attached_policies
-def list_user_inline_policies(username):
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_user_policies')
-    user_inline_policies = []
-    for page in paginator.paginate(UserName = username):
-        user_inline_policies.extend(page['PolicyNames'])
-    return user_inline_policies
-def list_role_inline_policies(rolename):
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_role_policies')
-    role_inline_policies = []
-    for page in paginator.paginate(RoleName = rolename):
-        role_inline_policies.extend(page['PolicyNames'])
-    return role_inline_policies
-def get_user_inline_policy(username, policyname):
-    response = get_session().client('iam').get_user_policy(UserName = username, PolicyName = policyname)
-    return {
-        "PolicyName" : response["PolicyName"],
-        "PolicyDocument": response["PolicyDocument"]}
-def get_role_inline_policy(rolename, policyname):
-    response = get_session().client('iam').get_role_policy(RoleName = rolename, PolicyName = policyname)
-    return {
-        "PolicyName" : response["PolicyName"],
-        "PolicyDocument": response["PolicyDocument"]}
-def get_managed_policy(policy_arn):
-    session = get_session()
-    iam_client = session.client("iam")
+def list_users() -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_users')
+        users = []
+        for page in paginator.paginate():
+            users.extend(page['Users'])
+        return users
+    except ClientError as e:
+        logger.warning(f"Failed to list users: {e}")
+        return []
+def list_roles() -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_roles')
+        roles = []
+        for page in paginator.paginate():
+            roles.extend(page['Roles'])
+        return roles
+    except ClientError as e:
+        logger.warning(f"Failed to list roles: {e}")
+        return []
+def list_groups() -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_groups')
+        groups = []
+        for page in paginator.paginate():
+            groups.extend(page['Groups'])
+        return groups
+    except ClientError as e:
+        logger.warning(f"Failed to list groups: {e}")
+        return []
+def list_policies() -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_policies')
+        policies = []
+        for page in paginator.paginate():
+            policies.extend(page['Policies'])
+        return policies
+    except ClientError as e:
+        logger.warning(f"Failed to list policies: {e}")
+        return []
+def list_attached_user_policies(username: str) -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_attached_user_policies')
+        user_attached_policies = []
+        for page in paginator.paginate(UserName = username):
+            user_attached_policies.extend(page['AttachedPolicies'])
+        return user_attached_policies
+    except ClientError as e:
+        logger.warning(f"Failed to list attached policies for user {username}: {e}")
+        return []
+def list_attached_role_policies(rolename: str) -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_attached_role_policies')
+        role_attached_policies = []
+        for page in paginator.paginate(RoleName = rolename):
+            role_attached_policies.extend(page['AttachedPolicies'])
+        return role_attached_policies
+    except ClientError as e:
+        logger.warning(f"Failed to list attached policies for role {rolename}: {e}")
+        return []
+def list_user_inline_policies(username: str) -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_user_policies')
+        user_inline_policies = []
+        for page in paginator.paginate(UserName = username):
+            user_inline_policies.extend(page['PolicyNames'])
+        return user_inline_policies
+    except ClientError as e:
+        logger.warning(f"Failed to list inline policies for user {username}: {e}")
+        return []
+def list_role_inline_policies(rolename: str) -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_role_policies')
+        role_inline_policies = []
+        for page in paginator.paginate(RoleName = rolename):
+            role_inline_policies.extend(page['PolicyNames'])
+        return role_inline_policies
+    except ClientError as e:
+        logger.warning(f"Failed to list inline policies for role {rolename}: {e}")
+        return []
+def get_user_inline_policy(username: str, policyname: str) -> dict:
+    try:
+        response = get_session().client('iam').get_user_policy(UserName = username, PolicyName = policyname)
+        return {
+            "PolicyName" : response["PolicyName"],
+            "PolicyDocument": response["PolicyDocument"]}
+    except ClientError as e:
+        logger.warning(f"Failed to get inline policy {policyname} for user {username}: {e}")
+        return {}
+def get_role_inline_policy(rolename: str, policyname: str) -> dict:
+    try:
+        response = get_session().client('iam').get_role_policy(RoleName = rolename, PolicyName = policyname)
+        return {
+            "PolicyName" : response["PolicyName"],
+            "PolicyDocument": response["PolicyDocument"]}
+    except ClientError as e:
+        logger.warning(f"Failed to get inline policy {policyname} for role {rolename}: {e}")
+        return {}
+def get_managed_policy(policy_arn: str) -> dict:
+    try:
+        session = get_session()
+        iam_client = session.client("iam")
 
-    policy = iam_client.get_policy(
-        PolicyArn=policy_arn
-    )["Policy"]
+        policy = iam_client.get_policy(
+            PolicyArn=policy_arn
+        )["Policy"]
 
-    version = iam_client.get_policy_version(
-        PolicyArn=policy_arn,
-        VersionId=policy["DefaultVersionId"]
-    )["PolicyVersion"]
+        version = iam_client.get_policy_version(
+            PolicyArn=policy_arn,
+            VersionId=policy["DefaultVersionId"]
+        )["PolicyVersion"]
 
-    return {
-        "PolicyName": policy["PolicyName"],
-        "PolicyArn": policy["Arn"],
-        "PolicyDocument": version["Document"]
-    }
-def list_attached_group_policies(groupName):
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_attached_group_policies')
-    group_attached_policies = []
-    for page in paginator.paginate(GroupName = groupName):
-        group_attached_policies.extend(page['AttachedPolicies'])
-    return group_attached_policies
-def list_group_inline_policies(groupName):
-    session = get_session()
-    iam_client = session.client('iam')
-    paginator = iam_client.get_paginator('list_group_policies')
-    group_inline_policies = []
-    for page in paginator.paginate(GroupName = groupName):
-        group_inline_policies.extend(page['PolicyNames'])
-    return group_inline_policies
-def get_group_inline_policy(groupname, policyname):
-    response = get_session().client('iam').get_group_policy(GroupName = groupname, PolicyName = policyname)
-    return{
-        "PolicyName" : response["PolicyName"],
-        "PolicyDocument" : response["PolicyDocument"]
-    }
-def get_role_trust_policy(rolename):
-    return get_session().client('iam').get_role(RoleName = rolename)['Role']["AssumeRolePolicyDocument"]
+        return {
+            "PolicyName": policy["PolicyName"],
+            "PolicyArn": policy["Arn"],
+            "PolicyDocument": version["Document"]
+        }
+    except ClientError as e:
+        logger.warning(f"Failed to get managed policy {policy_arn}: {e}")
+        return {}
+def list_attached_group_policies(groupName: str) -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_attached_group_policies')
+        group_attached_policies = []
+        for page in paginator.paginate(GroupName = groupName):
+            group_attached_policies.extend(page['AttachedPolicies'])
+        return group_attached_policies
+    except ClientError as e:
+        logger.warning(f"Failed to list attached policies for group {groupName}: {e}")
+        return []
+def list_group_inline_policies(groupName: str) -> list:
+    try:
+        session = get_session()
+        iam_client = session.client('iam')
+        paginator = iam_client.get_paginator('list_group_policies')
+        group_inline_policies = []
+        for page in paginator.paginate(GroupName = groupName):
+            group_inline_policies.extend(page['PolicyNames'])
+        return group_inline_policies
+    except ClientError as e:
+        logger.warning(f"Failed to list inline policies for group {groupName}: {e}")
+        return []
+def get_group_inline_policy(groupname: str, policyname: str) -> dict:
+    try:
+        response = get_session().client('iam').get_group_policy(GroupName = groupname, PolicyName = policyname)
+        return{
+            "PolicyName" : response["PolicyName"],
+            "PolicyDocument" : response["PolicyDocument"]
+        }
+    except ClientError as e:
+        logger.warning(f"Failed to get inline policy {policyname} for group {groupname}: {e}")
+        return {}
+def get_role_trust_policy(rolename: str) -> dict:
+    try:
+        return get_session().client('iam').get_role(RoleName = rolename)['Role']["AssumeRolePolicyDocument"]
+    except ClientError as e:
+        logger.warning(f"Failed to get trust policy for role {rolename}: {e}")
+        return {}
 
-def get_access_keys(username):
-    return get_session().client('iam').list_access_keys(UserName = username)['AccessKeyMetadata']
+def get_access_keys(username: str) -> list:
+    try:
+        return get_session().client('iam').list_access_keys(UserName = username)['AccessKeyMetadata']
+    except ClientError as e:
+        logger.warning(f"Failed to list access keys for user {username}: {e}")
+        return []
 def get_access_key_last_used(access_key_id: str) -> dict:
     try:
         iam_client = get_session().client('iam')
@@ -141,13 +205,14 @@ def get_access_key_last_used(access_key_id: str) -> dict:
             "ServiceName": "N/A",
             "Region": "N/A"
         }
-def update_access_key(userName,accessKeyId,status):
+def update_access_key(userName: str, accessKeyId: str, status: str) -> dict:
     try:
         iam_client = get_session().client('iam')
         response = iam_client.update_access_key(UserName = userName, AccessKeyId = accessKeyId, Status = status)
         return response.get('ResponseMetadata')
     except ClientError as e:
         logger.error(f"User status not changed for key {userName} {accessKeyId}: {e}")
+        return {}
 def set_user_permissions_boundary(user_name: str, boundary_arn: str) -> bool:
     try:
         iam_client = get_session().client('iam')
@@ -196,8 +261,8 @@ def tag_role(rolename: str, tags: list)-> bool:
     try:
         session = get_session()
         iam_client = session.client('iam')
-        response = iam_client.tag_user(Tags = tags, RoleName = rolename)
+        response = iam_client.tag_role(Tags = tags, RoleName = rolename)
         return True
     except ClientError as e:
-            logger.warning(f"Failed to update tags for user which was untagged {rolename}: {e}")
+            logger.warning(f"Failed to update tags for role which was untagged {rolename}: {e}")
             return False
