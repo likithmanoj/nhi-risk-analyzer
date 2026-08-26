@@ -13,6 +13,7 @@ HANDLER_MAP = {
     "IAM_06": handle_policy_remediation,
     "IAM_07": handle_policy_remediation,
     "IAM_08": handle_policy_remediation,
+    "IAM_10": handle_policy_remediation,    
     "IAM_11": handle_credential_remediation,
     "IAM_12": handle_credential_remediation,
     "TAG_01": remediate_missing_tags
