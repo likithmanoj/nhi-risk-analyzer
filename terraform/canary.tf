@@ -194,3 +194,30 @@ resource "aws_iam_role_policy" "canary_cred_escalation_policy" {
     ]
   })
 }
+
+# ---------------------------------------------------------------------------
+# IAM_10 Test Canary: Overly Permissive AssumeRole Trust Policy
+# ---------------------------------------------------------------------------
+
+resource "aws_iam_role" "nhi_canary_role_permissive_trust" {
+  name        = "nhi-canary-role-permissive-trust"
+  description = "Test canary for IAM_10: Public unconstrained sts:AssumeRole trust policy"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "sts:AssumeRole"
+        Principal = {
+          AWS = "*"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Owner       = "SecurityAutomation"
+    Environment = "Dev"
+  }
+}

@@ -11,6 +11,7 @@ from nhi.risk.rules.privilege_escalation import (
 )
 from nhi.remediation.dispatch import dispatch_remediation
 from nhi.risk.rules.tags import analyze_mandatory_tags
+from nhi.risk.rules.trust_policy import analyze_trust_policy #IAM_10
 
 
 def run_privilege_escalation_checks(policies, identity_type, identity_name):
@@ -69,6 +70,8 @@ def analyze_inventory():
         findings.extend(run_privilege_escalation_checks(attached, "Role", role_name))
         findings.extend(run_privilege_escalation_checks(inline, "Role", role_name))
         findings.extend(analyze_mandatory_tags(role, "Role"))
+        trust_policy = role.get("TrustPolicy", {})
+        findings.extend(analyze_trust_policy(trust_policy, role_name))
 
     return findings
 
