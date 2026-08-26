@@ -1,3 +1,11 @@
+GLOBAL_NON_RESOURCE_ACTIONS = {
+    "sts:getcalleridentity",
+    "iam:getaccountsummary",
+    "iam:generatecredentialreport",
+    "ec2:getaccountattributes",
+    "cloudtrail:lookupevents",
+}
+
 def analyze_admin_access(policies,identityType,identityName):
     findings = []
     for policy in policies:
@@ -16,6 +24,8 @@ def analyze_policy(policies,identityType,identityName):
     findings = []
     
     for policy in policies:
+        if(policy.get("PolicyArn") and policy.get('PolicyArn').startswith("arn:aws:iam::aws:policy/")):
+             continue
         statements = policy["PolicyDocument"]["Statement"]
         if isinstance(statements, dict):
                         statements = [statements]
@@ -45,6 +55,8 @@ def analyze_policy(policies,identityType,identityName):
                     "Action": actions_findings[0]["Action"],
                     })
             elif resources_findings:
+                if are_all_actions_non_resource(actions):
+                    continue
                 for resource in resources_findings:
                     is_scoped = resource.get("Type") == "SCOPED_PREFIX"
                     findings.append({
@@ -113,3 +125,30 @@ def classify_resources(resource):
             return "SCOPED_PREFIX"
         return "UNCONSTRAINED"
     return "SPECIFIC"
+
+def is_non_resource_action(action: str) -> bool:
+    if not isinstance(action, str):
+        return False
+    
+    action_lower = action.strip().lower()
+    
+    if action_lower.endswith(":*") or action_lower == "*":
+        return False
+    
+    if action_lower in GLOBAL_NON_RESOURCE_ACTIONS:
+        return True
+    
+    if ":" in action_lower:
+        _service, api = action_lower.split(":", 1)
+        if api.startswith("describe") or api.startswith("list"):
+            return True
+            
+    return False
+
+def are_all_actions_non_resource(actions) -> bool:
+    if isinstance(actions, str):
+        actions = [actions]
+    elif not isinstance(actions, list) or not actions:
+        return False
+    
+    return all(is_non_resource_action(act) for act in actions)
