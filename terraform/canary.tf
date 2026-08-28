@@ -49,7 +49,6 @@ resource "aws_iam_user" "canary_user_credentials" {
   tags          = local.canary_tags
 }
 
-# Unused active access key -> Should trigger IAM_12 and be set to Inactive
 resource "aws_iam_access_key" "canary_test_key" {
   user   = aws_iam_user.canary_user_credentials.name
   status = "Active"
@@ -138,7 +137,6 @@ resource "aws_iam_role_policy" "canary_policy_escalation_policy" {
         Effect = "Allow"
         Action = [
           "iam:CreatePolicyVersion",
-          "iam:SetDefaultPolicyVersion",
           "iam:AttachRolePolicy",
           "iam:PutRolePolicy"
         ]
@@ -195,13 +193,51 @@ resource "aws_iam_role_policy" "canary_cred_escalation_policy" {
   })
 }
 
-# ---------------------------------------------------------------------------
-# IAM_10 Test Canary: Overly Permissive AssumeRole Trust Policy
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# 6. CANARY ROLE 4: Set Default Policy Version Escalation (IAM_09)
+# ------------------------------------------------------------------------------
+resource "aws_iam_role" "canary_role_set_policy_version" {
+  name = "nhi-canary-role-set-policy-version"
+  tags = local.canary_tags
 
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "canary_set_policy_version_policy" {
+  name = "canary-set-policy-version"
+  role = aws_iam_role.canary_role_set_policy_version.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "SetDefaultVersionEscalation"
+        Effect   = "Allow"
+        Action   = ["iam:SetDefaultPolicyVersion"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# ------------------------------------------------------------------------------
+# 7. CANARY ROLE 5: Permissive Trust Policy (IAM_10)
+# ------------------------------------------------------------------------------
 resource "aws_iam_role" "nhi_canary_role_permissive_trust" {
   name        = "nhi-canary-role-permissive-trust"
   description = "Test canary for IAM_10: Public unconstrained sts:AssumeRole trust policy"
+  tags        = local.canary_tags
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -215,9 +251,91 @@ resource "aws_iam_role" "nhi_canary_role_permissive_trust" {
       }
     ]
   })
+}
 
-  tags = {
-    Owner       = "SecurityAutomation"
-    Environment = "Dev"
-  }
+# ------------------------------------------------------------------------------
+# 8. CANARY ROLE 6: Data Perimeter Exfiltration & Decryption (IAM_14, IAM_16)
+# ------------------------------------------------------------------------------
+resource "aws_iam_role" "canary_role_data_perimeter" {
+  name = "nhi-canary-role-data-perimeter"
+  tags = local.canary_tags
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "canary_data_perimeter_policy" {
+  name = "canary-data-perimeter"
+  role = aws_iam_role.canary_role_data_perimeter.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "S3DataExfiltration"
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:GetObjectVersion"]
+        Resource = "*"
+      },
+      {
+        Sid      = "KMSDecryption"
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# ------------------------------------------------------------------------------
+# 9. CANARY ROLE 7: Security Defense Evasion (IAM_15)
+# ------------------------------------------------------------------------------
+resource "aws_iam_role" "canary_role_defense_evasion" {
+  name = "nhi-canary-role-defense-evasion"
+  tags = local.canary_tags
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "canary_defense_evasion_policy" {
+  name = "canary-defense-evasion"
+  role = aws_iam_role.canary_role_defense_evasion.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "DefenseEvasionActions"
+        Effect = "Allow"
+        Action = [
+          "cloudtrail:StopLogging",
+          "cloudtrail:DeleteTrail",
+          "guardduty:DeleteDetector",
+          "kms:DisableKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
