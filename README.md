@@ -91,10 +91,14 @@ Rule IDs are grouped by category rather than numbered strictly sequentially — 
 | **`IAM_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
 | **`IAM_07`** | Privilege Escalation via `iam:CreateAccessKey` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
 | **`IAM_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
-| **`IAM_09`** | Permissive Role Trust Policies | Trust Analysis | `HIGH` | 📋 Planned | Alert / Reporting Only |
-| **`IAM_10`** | Unrestricted `sts:AssumeRole` Execution | Privilege Escalation | `HIGH` / `CRITICAL` | 📋 Planned | Alert / Reporting Only |
+| **`IAM_09`** | Privilege Escalation via `iam:SetDefaultPolicyVersion` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`IAM_10`** | Permissive Role Trust Policies (`*` AssumeRole Principal) | Trust Policy Analysis | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
 | **`IAM_11`** | Stale Access Keys (>90 Days Old) | Credential Security | `HIGH` / `LOW` | ✅ Implemented | Deactivate Key (`Status: Inactive`) |
 | **`IAM_12`** | Unused & Dormant Access Keys (>30 Days) | Credential Security | `HIGH` | ✅ Implemented | Deactivate Key (`Status: Inactive`) |
+| **`IAM_14`** | Unrestricted S3 Data Exfiltration (`s3:GetObject*`, `s3:*`) | Data Perimeter | `HIGH` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`IAM_15`** | Security Defense Evasion (CloudTrail/GuardDuty/KMS tampering) | Resource Protection | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`IAM_16`** | Unrestricted KMS Decryption (`kms:Decrypt`, `kms:*`) | Data Perimeter | `HIGH` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`TAG_01`** | Missing Mandatory Governance Tags (`Owner`, `Environment`) | Governance & Tagging | `LOW` | ✅ Implemented | Apply Mandatory Tags |
 
 **Detection methodology sources:** Rules are informed by Rhino Security Labs' documented AWS IAM privilege escalation research (21 methods), Salesforce's Cloudsplaining policy-severity methodology, the CIS AWS Foundations Benchmark (credential hygiene thresholds), and AWS's own IAM best-practices documentation.
 
@@ -239,8 +243,8 @@ The architecture decouples offline rule evaluation from remediation dispatching,
   * Snapshot export to local `inventory.json` and remote S3
 
 * [x] **Phase 3: Risk Evaluation Engine**
-  * Modular security rules (`wildcards.py`, `credentials.py`, `privilege_escalation.py`)
-  * Detection for wildcard actions/resources, admin access, stale keys, unused/dormant keys, and documented IAM privilege-escalation paths
+  * Modular security rules (`wildcards.py`, `credentials.py`, `privilege_escalation.py`, `data_perimeter.py`, `resource_protection.py`, `tags.py`, `trust_policy.py`)
+  * Detection for wildcard actions/resources, admin access, stale keys, unused/dormant keys, documented IAM privilege escalation paths, public trust policies, S3 data exfiltration, KMS decryption, and security defense evasion
 
 * [x] **Phase 4: Automated Remediation Engine (Containment V1)**
   * Permissions Boundary containment for privilege escalation and policy over-privilege (`nhi/remediation/handlers/policy.py`)
@@ -253,11 +257,13 @@ The architecture decouples offline rule evaluation from remediation dispatching,
 
 ### 🔮 Future Architectural Planning
 
-#### Phase 5: Risk Engine V2 (Surgical Remediation)
-
-* **Selective Policy Surgery:** Parse inline policy JSON documents and strip wildcard statements (`*`) down to scoped actions.
-* **Direct AdministratorAccess Detachment:** Dedicated handler for `IAM_03` to remove root-equivalent managed policies directly.
-* **IAM Group Edge-Case Handling:** Automated alerting and diff-reporting for group findings where boundaries cannot be attached.
+#### Phase 5: Risk Engine V2 & 3-Tier Remediation
+* **Tier 3 Policy Surgery:**
+  * Implement automated AST document rewrites via `policy_surgery.py` for inline policies.
+  * Statement partitioning: Separate non-resource discovery APIs (`Describe*`, `List*`) from scoped resource mutations (`Put*`, `Get*`, `Decrypt`).
+  * Rollback journaling: Save the pre-surgery policy JSON snapshot to S3 before executing `PutUserPolicy` / `PutRolePolicy` updates.
+* **Direct AdministratorAccess Detachment:** Dedicated handler for `IAM_03` to cleanly detach root-equivalent managed policies.
+* **Target-Level Remediation Deduplication:** Coalesce multi-finding dispatches to execute single, unified remediation calls per IAM identity.
 
 #### Phase 6: Team Communication & Event Notifications
 
@@ -373,39 +379,51 @@ The scanner execution role requires the following minimal IAM policy to inventor
 ```text
 nhi-risk-analyzer/
 ├── nhi/
-│   ├── aws/                  # Boto3 wrappers & session management
-│   │   ├── iam.py            # IAM API helpers (get_access_key_last_used, set_*_boundary, update_key)
-│   │   ├── s3.py             # S3 upload utilities
-│   │   └── session.py        # Cached AWS session initialization
+│   ├── aws/                       # Boto3 wrappers & session management
+│   │   ├── iam.py                 # IAM API helpers (get_access_key_last_used, set_*_boundary, update_key)
+│   │   ├── s3.py                  # S3 upload utilities
+│   │   └── session.py             # Cached AWS session initialization
 │   ├── risk/
-│   │   ├── risk.py           # Core risk engine runner & CLI interface
-│   │   └── rules/            # Modular evaluation rules
-│   │       ├── wildcards.py            # IAM_01, IAM_02, IAM_03
-│   │       ├── privilege_escalation.py # IAM_04–IAM_08 (Rhino-based escalation paths)
-│   │       └── credentials.py          # IAM_11, IAM_12
-│   ├── remediation/          # Automated remediation engine
-│   │   ├── dispatch.py       # Handler routing & stats collection
-│   │   ├── config.py         # Exemption parser (nhi-ignore.yaml)
+│   │   ├── risk.py                # Core risk engine runner & CLI interface
+│   │   ├── helpers.py             # Shared evaluation helpers (classification, action matching)
+│   │   └── rules/                 # Modular evaluation rules
+│   │       ├── wildcards.py       # IAM_01, IAM_02, IAM_03
+│   │       ├── privilege_escalation.py # IAM_04–IAM_09 (Rhino-based escalation paths)
+│   │       ├── trust_policy.py    # IAM_10 (Public trust policies)
+│   │       ├── credentials.py     # IAM_11, IAM_12 (Stale and dormant keys)
+│   │       ├── data_perimeter.py  # IAM_14, IAM_16 (S3 exfiltration & KMS decrypt)
+│   │       ├── resource_protection.py # IAM_15 (Defense evasion)
+│   │       └── tags.py            # TAG_01 (Mandatory tags)
+│   ├── remediation/               # Automated remediation engine
+│   │   ├── dispatch.py            # Handler routing & stats collection
+│   │   ├── config.py              # Exemption parser (nhi-ignore.yaml)
 │   │   └── handlers/
-│   │       ├── policy.py     # Boundary attachment handler (IAM_01–IAM_08)
-│   │       └── credential.py # Key deactivation handler (IAM_11–IAM_12)
+│   │       ├── policy.py          # Boundary attachment handler
+│   │       ├── credential.py      # Key deactivation handler
+│   │       └── tags.py            # Tag remediation handler
 │   ├── services/
-│   │   ├── inventory.py      # State collection & key enrichment
-│   │   └── export.py         # Output export handlers
-│   └── config.py             # Global threshold configurations
-├── terraform/                 # Infrastructure as Code for runner & S3 bucket
-│   ├── main.tf                # Runner IAM user/role, S3 bucket, boundary policy
-│   ├── canary.tf              # Validation canaries for live test suite
-│   ├── outputs.tf             # Terraform outputs
-│   └── remote_state.tf        # Terraform state backend bucket
-├── tests/                     # Automated unit test suite
-│   ├── test_credentials.py    # Rule unit tests for IAM_11 / IAM_12
-│   ├── test_inventory.py      # Mock-injected inventory tests
-│   ├── test_privilege_escalation.py # Resource classifier regression tests
-│   └── test_remediation.py    # Mock-injected remediation engine tests
-├── nhi-ignore.yaml            # Exemption configuration file
-├── admin.sh                   # Admin credentials bootstrap (gitignored)
-├── runner.sh                  # Dynamic runner credential export (gitignored)
+│   │   ├── inventory.py           # State collection & key enrichment
+│   │   └── export.py              # Output export handlers
+│   └── config.py                  # Global threshold configurations
+├── terraform/                      # Infrastructure as Code for runner & S3 bucket
+│   ├── main.tf                    # Runner IAM user/role, S3 bucket, boundary policy
+│   ├── canary.tf                  # Validation canaries for live test suite (IAM_01–IAM_16, TAG_01)
+│   ├── outputs.tf                 # Terraform outputs
+│   └── remote_state.tf             # Terraform state backend bucket
+├── tests/                         # Automated unit test suite (pytest)
+│   ├── test_credentials.py         # Rule unit tests for IAM_11 / IAM_12
+│   ├── test_data_perimeter.py     # Rule unit tests for IAM_14 / IAM_16
+│   ├── test_inventory.py          # Mock-injected inventory tests
+│   ├── test_policy_surgery.py     # Policy parsing & AST unit tests
+│   ├── test_privilege_escalation.py # Privilege escalation & resource classifier tests (IAM_04–IAM_09)
+│   ├── test_remediation.py        # Mock-injected remediation engine tests
+│   ├── test_remediation_credentials.py # Credential dispatch flow tests
+│   ├── test_resource_protection.py# Defense evasion rule unit tests (IAM_15)
+│   └── test_trust_policy.py       # Permissive trust policy unit tests (IAM_10)
+├── nhi-ignore.yaml                 # Exemption configuration file
+├── pytest.ini                     # Pytest configuration (pythonpath = .)
+├── admin.sh                        # Admin credentials bootstrap (gitignored)
+├── runner.sh                       # Dynamic runner credential export (gitignored)
 └── README.md
 ```
 
@@ -530,7 +548,7 @@ python -m nhi.risk.risk --remediate
 To run the full unit test suite offline without live AWS API dependencies:
 
 ```bash
-python -m pytest -v tests/
+pytest tests/ -v
 ```
 
 ---
