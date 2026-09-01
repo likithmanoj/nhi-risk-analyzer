@@ -6,6 +6,36 @@ GLOBAL_NON_RESOURCE_ACTIONS = {
     "cloudtrail:lookupevents",
 }
 
+RESOURCE_SCOPED_ACTIONS = {
+    # S3 (Bucket-level scope)
+    "s3:listbucket",
+    "s3:listbucketversions",
+    "s3:listbucketmultipartuploads",
+    # Secrets Manager & KMS
+    "secretsmanager:describesecret",
+    "secretsmanager:listsecretversionids",
+    "kms:describekey",
+    "kms:listgrants",
+    "kms:listresourcetags",
+    # IAM Resource-Scoped Listings
+    "iam:listattacheduserpolicies",
+    "iam:listattachedrolepolicies",
+    "iam:listattachedgrouppolicies",
+    "iam:listuserpolicies",
+    "iam:listrolepolicies",
+    "iam:listgrouppolicies",
+    # Databases & Compute
+    "dynamodb:describetable",
+    "dynamodb:describetimetolive",
+    "lambda:listversionsbyfunction",
+    "lambda:listaliases",
+    # Messaging
+    "sqs:listdeadlettersourcequeues",
+    "sqs:listqueuearns",
+    "sns:listtagsforresource",
+}
+
+
 
 def classify_resources(resource):
     if not isinstance(resource, str):
@@ -88,6 +118,9 @@ def is_non_resource_action(action: str) -> bool:
     action_lower = action.strip().lower()
 
     if action_lower.endswith(":*") or action_lower == "*":
+        return False
+
+    if action_lower in RESOURCE_SCOPED_ACTIONS:
         return False
 
     if action_lower in GLOBAL_NON_RESOURCE_ACTIONS:
