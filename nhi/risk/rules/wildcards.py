@@ -5,26 +5,32 @@ from nhi.risk.helpers import (
     are_all_actions_non_resource,
 )
 
-def analyze_admin_access(policies,identityType,identityName):
+KNOWN_DANGEROUS_MANAGED_POLICIES = {
+    "arn:aws:iam::aws:policy/AdministratorAccess": "AdministratorAccess Managed Policy Attached",
+    "arn:aws:iam::aws:policy/IAMFullAccess": "IAMFullAccess Managed Policy Attached (privilege escalation primitive)",
+    "arn:aws:iam::aws:policy/PowerUserAccess": "PowerUserAccess Managed Policy Attached",
+}
+
+def analyze_admin_access(policies, identityType, identityName):
     findings = []
     for policy in policies:
-        if policy['PolicyArn'] == "arn:aws:iam::aws:policy/AdministratorAccess":
+        arn = policy.get("PolicyArn")
+        if arn in KNOWN_DANGEROUS_MANAGED_POLICIES:
             findings.append({
                 "RuleID": "IAM_03",
                 "Severity": "CRITICAL",
-                "IdentityType":identityType,
+                "IdentityType": identityType,
                 "IdentityName": identityName,
-                "PolicyName" : policy['PolicyName'],
-                "Finding": "AdministratorAccess Managed Policy Attached",
-                })
+                "PolicyName": policy.get("PolicyName"),
+                "PolicyArn": arn,
+                "Finding": KNOWN_DANGEROUS_MANAGED_POLICIES[arn]
+            })
     return findings
 
 def analyze_policy(policies,identityType,identityName):
     findings = []
     
     for policy in policies:
-        if(policy.get("PolicyArn") and policy.get('PolicyArn').startswith("arn:aws:iam::aws:policy/")):
-             continue
         statements = policy["PolicyDocument"]["Statement"]
         if isinstance(statements, dict):
                         statements = [statements]
@@ -49,6 +55,7 @@ def analyze_policy(policies,identityType,identityName):
                     "IdentityType":identityType,
                     "IdentityName": identityName,
                     "PolicyName" : policy['PolicyName'],
+                    "PolicyArn": policy.get("PolicyArn"),
                     "Finding": "Administrator-Equivalent Permissions",
                     "Resource": resources_findings[0]["Resource"],
                     "Action": actions_findings[0]["Action"],
@@ -64,6 +71,7 @@ def analyze_policy(policies,identityType,identityName):
                     "IdentityType": identityType,
                     "IdentityName": identityName,
                     "PolicyName": policy['PolicyName'],
+                    "PolicyArn": policy.get("PolicyArn"),
                     "Finding": "Scoped Wildcard Resource Path" if is_scoped else "Wildcard Resources",
                     "Resource": resource["Resource"],
                     })
@@ -76,6 +84,7 @@ def analyze_policy(policies,identityType,identityName):
                        "IdentityType":identityType,
                        "IdentityName": identityName,
                         "PolicyName" : policy['PolicyName'],
+                        "PolicyArn": policy.get("PolicyArn"),
                         "Finding": "Wildcard Actions",
                         "Action": action["Action"],
                     })

@@ -22,6 +22,7 @@ def analyze_policy_for_kms_decryption(policies, identityType, identityName): # I
                         "IdentityType": identityType,
                         "IdentityName": identityName,
                         "PolicyName": policy.get("PolicyName", "Unknown"),
+                        "PolicyArn": policy.get("PolicyArn"),
                         "Action": statement.get("Action"),
                         "Resource": statement.get("Resource")
                     })
@@ -47,6 +48,7 @@ def analyze_policy_for_s3_exfiltration(policies, identityType, identityName): # 
                         "IdentityType": identityType,
                         "IdentityName": identityName,
                         "PolicyName": policy.get("PolicyName", "Unknown"),
+                        "PolicyArn": policy.get("PolicyArn"),
                         "Action": statement.get("Action"),
                         "Resource": statement.get("Resource")
                     })

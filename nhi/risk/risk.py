@@ -100,8 +100,24 @@ def analyze_inventory():
         trust_policy = role.get("TrustPolicy", {})
         findings.extend(analyze_trust_policy(trust_policy, role_name))
 
+    findings = enrich_findings_for_aws_managed_policies(findings)
+
     return findings
 
+def enrich_findings_for_aws_managed_policies(findings):
+    for finding in findings:
+        arn = finding.get("PolicyArn")  # note: match the exact key you actually write elsewhere
+        if arn:
+            is_aws_managed = is_aws_managed_policy(arn)
+            finding["RemediationEligible"] = not is_aws_managed
+            if is_aws_managed:
+                finding["RemediationNote"] = "AWS-managed policy — cannot be rewritten. Detach or replace with a customer-managed equivalent."
+                
+    return findings
+
+
+def is_aws_managed_policy(policy_arn) -> bool:
+    return bool(policy_arn and policy_arn.startswith("arn:aws:iam::aws:policy/"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="NHI Risk Analyzer & Remediation Engine for AWS")
