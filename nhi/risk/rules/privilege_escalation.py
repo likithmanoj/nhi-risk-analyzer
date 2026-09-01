@@ -21,6 +21,7 @@ def analyze_passrole_with_wildcard(policies,identityType,identityName): #IAM_04
                             "IdentityType": identityType,
                             "IdentityName": identityName,
                             "PolicyName": policy.get("PolicyName", "Unknown"),
+                            "PolicyArn": policy.get("PolicyArn"),
                             "Action": statement.get("Action"),
                             "Resource": statement.get("Resource"),
                                 }                     
@@ -44,6 +45,7 @@ def analyze_create_policy_version(policies, identityType, identityName): #IAM_05
                         "IdentityType": identityType,
                         "IdentityName": identityName,
                         "PolicyName": policy.get("PolicyName", "Unknown"),
+                        "PolicyArn": policy.get("PolicyArn"),
                         "Action": statement.get("Action"),
                         "Resource": statement.get("Resource")
                             }                     
@@ -69,6 +71,7 @@ def analyze_policy_for_policy_attachment_escalation(policies, identityType, iden
                         "IdentityType": identityType,
                         "IdentityName": identityName,
                         "PolicyName": policy.get("PolicyName", "Unknown"),
+                        "PolicyArn": policy.get("PolicyArn"),
                         "Action": statement.get("Action"),
                         "Resource": statement.get("Resource")
                             }                     
@@ -92,6 +95,7 @@ def analyze_access_key_creation_escalation(policies, identityType, identityName)
                         "IdentityType": identityType,
                         "IdentityName": identityName,
                         "PolicyName": policy.get("PolicyName", "Unknown"),
+                        "PolicyArn": policy.get("PolicyArn"),
                         "Action": statement.get("Action"),
                         "Resource": statement.get("Resource")
                             }                     
@@ -117,6 +121,7 @@ def analyze_console_access_escalation(policies, identityType, identityName): #IA
                         "IdentityType": identityType,
                         "IdentityName": identityName,
                         "PolicyName": policy.get("PolicyName", "Unknown"),
+                        "PolicyArn": policy.get("PolicyArn"),
                         "Action": statement.get("Action"),
                         "Resource": statement.get("Resource")
                             }                     
@@ -140,6 +145,7 @@ def analyze_policy_for_set_policy_version(policies, identityType, identityName):
                         "IdentityType": identityType,
                         "IdentityName": identityName,
                         "PolicyName": policy.get("PolicyName", "Unknown"),
+                        "PolicyArn": policy.get("PolicyArn"),
                         "Action": statement.get("Action"),
                         "Resource": statement.get("Resource")
                             }                     

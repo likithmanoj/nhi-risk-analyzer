@@ -1,30 +1,5 @@
-GLOBAL_NON_RESOURCE_ACTIONS = {
-    "sts:getcalleridentity",
-    "iam:getaccountsummary",
-    "iam:generatecredentialreport",
-    "ec2:getaccountattributes",
-    "cloudtrail:lookupevents",
-}
-
-
-def is_non_resource_action(action: str) -> bool:
-    if not isinstance(action, str):
-        return False
-
-    action_lower = action.strip().lower()
-
-    if action_lower == "*" or action_lower.endswith(":*"):
-        return False
-
-    if action_lower in GLOBAL_NON_RESOURCE_ACTIONS:
-        return True
-
-    if ":" in action_lower:
-        _service, api = action_lower.split(":", 1)
-        if api.startswith("describe") or api.startswith("list"):
-            return True
-
-    return False
+from nhi.risk.helpers import (
+    GLOBAL_NON_RESOURCE_ACTIONS,RESOURCE_SCOPED_ACTIONS, is_non_resource_action)
 
 
 def analyze_resource(resource) -> bool:

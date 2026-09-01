@@ -172,15 +172,17 @@ class TestDispatchRemediation:
         assert dry_run_stats == {
             "total": 3,
             "would_remediate": 1,
+            "manual_review_required": 0,
             "skipped": 1,
-            "failed": 1
+            "failed": 1,
         }
 
-        # 2. Assert LIVE remediation returns 'remediated'
+        # 2. Assert LIVE execution returns 'remediated'
         live_stats = dispatch_remediation(findings, dry_run=False)
         assert live_stats == {
             "total": 3,
             "remediated": 1,
+            "manual_review_required": 0,
             "skipped": 1,
-            "failed": 1
+            "failed": 1,
         }
