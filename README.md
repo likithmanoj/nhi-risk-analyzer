@@ -1,74 +1,95 @@
-# NHI Risk Analyzer and Remediator for AWS
+# Multi-Cloud Non-Human Identity (NHI) Risk Analyzer & Remediator
 
-An offline-first security automation platform that discovers, inventories, analyzes, risk-assesses, and safely remediates **Non-Human Identities (NHIs)** — IAM users, groups, roles, and associated policies — across AWS environments.
+An enterprise-grade, offline-first security automation platform that discovers, inventories, analyzes, risk-assesses, and safely remediates **Non-Human Identities (NHIs)** — service principals, service accounts, machine roles, access keys, and credentials — across **AWS, Azure, and Google Cloud Platform (GCP)**.
 
-> ⭐️ **If you find this tool helpful for auditing and securing AWS Non-Human Identities, please consider starring the repository!**
+> ⭐️ **If you find this tool helpful for auditing and securing Non-Human Identities across clouds, please consider starring the repository!**
 
 ---
+
+## 🌐 Multi-Cloud Identity Coverage
+
+| Cloud Provider | Identity Types Covered | Discovery Engine | Secret / Credential Inspection | Status |
+|:---|:---|:---|:---|:---|
+| 🟧 **AWS** | IAM Roles, Machine Users, Groups, Policies | Boto3 + Session Caching | Access Keys (`CreateDate`, `LastUsed`) | ✅ Supported |
+| 🟦 **Azure** | Entra ID Service Principals, App Registrations, Managed Identities | Pure REST (Graph & ARM) | Client Secrets (`passwordCredentials`), Certs (`keyCredentials`) | ✅ Discovery Ready |
+| 🟥 **GCP** | Service Accounts, Workload Identity, IAM Roles | Pure REST (IAM & Resource Mgr) | Service Account Keys (`validBeforeTime`, key type) | 🚧 In Progress |
 
 ---
 
 ## 📋 Overview
 
-**NHI Risk Analyzer** addresses a critical cloud security challenge: enterprise AWS environments accumulate hundreds of non-human identities (service accounts, automation roles, CI/CD credentials, cross-account roles) with minimal visibility into which identities are over-privileged, dormant, or introduce privilege-escalation risk.
+**NHI Risk Analyzer** addresses a critical multi-cloud security challenge: modern enterprise cloud environments accumulate hundreds of machine and non-human identities (service accounts, automation roles, CI/CD credentials, cross-cloud trust roles) with minimal visibility into which identities are over-privileged, dormant, or introduce privilege-escalation risk.
 
 The platform enforces strict architectural decoupling across three distinct phases:
 
-1. **State Collection:** Live AWS ingestion into an `inventory.json` snapshot via Boto3.
-2. **Offline Risk Evaluation:** Evaluating IAM security rules against the snapshot without live network dependencies. This means the risk engine can be re-run, tested, and iterated on without touching AWS again, and every finding is reproducible against the exact account state it was generated from.
-3. **Automated Remediation & Containment:** A fail-closed containment pipeline that neutralizes dangerous escalation attack paths via Permissions Boundaries and deactivates stale/dormant credentials without causing operational microservice outages.
+1. **Multi-Cloud State Collection:** Ingestion into a normalized `inventory.json` snapshot via lightweight, cloud-native mechanisms (Boto3 session-cached for AWS; zero-dependency pure REST for Azure and GCP).
+2. **Offline Risk Evaluation:** Evaluating security rules against the snapshot without live network dependencies. This means the risk engine can be re-run, tested, and iterated on without touching cloud providers again, and every finding is reproducible against the exact account/tenant state it was generated from.
+3. **Automated Remediation & Containment:** A fail-closed containment pipeline that neutralizes dangerous escalation attack paths via policy boundaries and deactivates stale/dormant credentials without causing operational microservice outages.
 
 ---
 
 ## 🎯 Why This Project Exists
 
-Enterprise AWS environments routinely contain non-human identities that are:
+Enterprise multi-cloud environments routinely contain non-human identities that are:
 
-- **Unstandardized:** Created manually without consistent provisioning standards.
+- **Unstandardized:** Created manually across disparate clouds without unified provisioning standards.
 - **Over-Permissioned:** Granted administrative or wildcard permissions far exceeding actual operational needs.
 - **Dormant & Forgotten:** Left active long after workloads or integration pipelines have been decommissioned.
-- **Incompletely Audited:** Carrying inline policies that bypass standard managed-policy checks.
-- **Credential Risks:** Utilizing access keys that are stale (>90 days old) or have never been used since inception.
-- **Escalation-Prone:** Holding IAM permissions that, alone or combined, allow privilege escalation to full administrator access — documented attack paths that most policy-only scanners don't check for.
+- **Incompletely Audited:** Carrying inline policies, custom role definitions, or direct bindings that bypass standard compliance checks.
+- **Credential Risks:** Utilizing access keys, client secrets, or service account keys that are stale (>90 days old), expiring, or have never been used since inception.
+- **Escalation-Prone:** Holding cloud IAM permissions that, alone or combined, allow privilege escalation to full administrator access — documented attack paths that most policy-only scanners don't check for.
 
-NHI Risk Analyzer automates discovery, security analysis, and targeted remediation using live AWS APIs and offline rule processing.
+NHI Risk Analyzer automates discovery, security analysis, and targeted remediation across cloud providers using cloud APIs and offline rule processing.
 
 ---
 
 ## 🏗️ Architecture & Workflow
 
 ```text
-  ┌──────────────┐         ┌──────────────────┐         ┌─────────────────┐
-  │   AWS IAM    │ ──────> │   inventory.py   │ ──────> │  inventory.json │
-  │   APIs       │  boto3  │ (State Collector)│         │   (Raw Snapshot)│
-  └──────────────┘         └──────────────────┘         └────────┬────────┘
-                                                                 │
-                                                                 ▼
-  ┌──────────────┐         ┌──────────────────┐         ┌─────────────────┐
-  │  S3 Snapshot │ <────── │      export.py   │ <────── │     risk.py     │
-  │   Storage    │  upload │   (S3 Export)    │         │ (Offline Engine)│
-  └──────────────┘         └──────────────────┘         └────────┬────────┘
-                                                                 │
-                                                                 ▼
-                                                        ┌─────────────────┐
-                                                        │   dispatch.py   │
-                                                        │  (Remediation)  │
-                                                        └────────┬────────┘
-                                                                 │
-                                       ┌─────────────────────────┴────────────────────────┐
-                                       ▼                                                  ▼
-                            ┌─────────────────────┐                            ┌─────────────────────┐
-                            │      policy.py      │                            │    credential.py    │
-                            │ (Attach Boundary)   │                            │ (Deactivate Key)    │
-                            └─────────────────────┘                            └─────────────────────┘
+  ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+  │   AWS IAM    │         │  Azure Entra │         │   GCP IAM    │
+  │   (Boto3)    │         │  (Pure REST) │         │  (Pure REST) │
+  └──────┬───────┘         └──────┬───────┘         └──────┬───────┘
+         │                        │                        │
+         └────────────────┐       │       ┌────────────────┘
+                          ▼       ▼       ▼
+                    ┌───────────────────────────┐
+                    │       inventory.py        │
+                    │ (Multi-Cloud Collector)   │
+                    └─────────────┬─────────────┘
+                                  ▼
+                    ┌───────────────────────────┐
+                    │      inventory.json       │
+                    │  (Unified State Snapshot) │
+                    └─────────────┬─────────────┘
+                                  │
+                                  ▼
+                    ┌───────────────────────────┐
+                    │          risk.py          │
+                    │    (Offline Risk Engine)  │
+                    └─────────────┬─────────────┘
+                                  │
+                                  ▼
+                    ┌───────────────────────────┐
+                    │        dispatch.py        │
+                    │ (Containment Dispatcher)  │
+                    └─────────────┬─────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+         ┌─────────────────────┐     ┌─────────────────────┐
+         │      policy.py      │     │    credential.py    │
+         │ (Attach Boundary)   │     │ (Deactivate Key)    │
+         └─────────────────────┘     └─────────────────────┘
 ```
 
-1. **State Collection (`nhi/services/inventory.py`):** Queries AWS IAM APIs via Boto3, enriches user access key metadata with `GetAccessKeyLastUsed` details, and serializes a clean state snapshot to `inventory.json`.
+1. **State Collection (`nhi/services/inventory.py`):** Queries cloud APIs across AWS, Azure, and GCP, enriches credential metadata (access key last-used, secret expiration), and serializes a clean state snapshot to `inventory.json`.
 2. **Offline Evaluation (`nhi/risk/risk.py`):** Loads `inventory.json` locally and passes resource payloads through modular security rules inside `nhi/risk/rules/`.
-3. **Artifact Export & Run-over-Run Diffing (`nhi/services/export.py`, `nhi/remediation/diff.py`):** Calculates security drift against historical baseline scans, uploads execution artifacts to S3, and optionally exports findings to CSV for spreadsheet auditing.
+3. **Artifact Export & Run-over-Run Diffing (`nhi/services/export.py`, `nhi/remediation/diff.py`):** Calculates security drift against historical baseline scans, uploads execution artifacts to cloud storage, and exports findings to CSV and OASIS SARIF v2.1.0 for audit pipelines.
 4. **Remediation Dispatcher (`nhi/remediation/dispatch.py`):** Routes actionable findings through safe containment handlers with fail-closed safety, dry-run simulation mode, and exemption filtering via `nhi-ignore.yaml`.
 
 ---
+
 
 ## ⚡ Engineering Optimizations
 
