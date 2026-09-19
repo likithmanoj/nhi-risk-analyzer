@@ -12,7 +12,7 @@ An enterprise-grade, offline-first security automation platform that discovers, 
 |:---|:---|:---|:---|:---|
 | 🟧 **AWS** | IAM Roles, Machine Users, Groups, Policies | Boto3 + Session Caching | Access Keys (`CreateDate`, `LastUsed`) | ✅ Supported |
 | 🟦 **Azure** | Entra ID Service Principals, App Registrations, Managed Identities | Pure REST (Graph & ARM) | Client Secrets (`passwordCredentials`), Certs (`keyCredentials`) | ✅ Discovery Ready |
-| 🟥 **GCP** | Service Accounts, Workload Identity, IAM Roles | Pure REST (IAM & Resource Mgr) | Service Account Keys (`validBeforeTime`, key type) | 🚧 In Progress |
+| 🟥 **GCP** | Service Accounts, Workload Identity, IAM Roles | Pure REST (IAM & Resource Mgr) | Service Account Keys (`validBeforeTime`, key type) | ✅ Discovery Ready |
 
 ---
 
@@ -382,7 +382,23 @@ export AZURE_CLIENT_SECRET="<SERVICE_PRINCIPAL_SECRET>"
 export AZURE_TENANT_ID="<AZURE_TENANT_ID>"
 ```
 
+### 4. GCP Setup
+
+GCP discovery uses standard Application Default Credentials (ADC), supporting local user credentials, service account key files, or attached workload identities automatically:
+
+```bash
+# Explicit Project ID target (or auto-detected from credentials)
+export GCP_PROJECT_ID="<YOUR_GCP_PROJECT_ID>"
+
+# Local interactive development:
+gcloud auth application-default login
+
+# Or CI/CD Service Account authentication:
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
+```
+
 ---
+
 
 ## 🔐 Required IAM Permissions
 
