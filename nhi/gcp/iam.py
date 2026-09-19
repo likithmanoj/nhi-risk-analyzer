@@ -70,7 +70,12 @@ def get_project_iam_policy(project_id: str | None = None) -> dict:
     proj_id = project_id or get_project_id()
     url = f"{CRM_BASE_URL}/projects/{proj_id}:getIamPolicy"
     try:
-        response = requests.post(url, headers=headers, timeout=30)
+        response = requests.post(
+            url,
+            headers=headers,
+            json={"options": {"requestedPolicyVersion": 3}},
+            timeout=30,
+        )
         if response.status_code != 200:
             logger.error(f"GCP API error {response.status_code} for {url}: {response.text}")
             return {}
@@ -83,5 +88,22 @@ def list_roles(project_id: str | None = None) -> list:
     proj_id = project_id or get_project_id()
     url = f"{IAM_BASE_URL}/projects/{proj_id}/roles"
     return fetch_all(url, get_gcp_headers(), key="roles")
+
+def get_role(role_name: str) -> dict:
+    headers = get_gcp_headers()
+    if not headers:
+        raise ValueError("No authorization headers available for get_role")
+    clean_role = role_name.lstrip("/")
+    url = f"{IAM_BASE_URL}/{clean_role}"
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        if response.status_code != 200:
+            logger.error(f"GCP API error {response.status_code} for {url}: {response.text}")
+            return {}
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"Error fetching role definition for {role_name}: {e}")
+        return {}
+
 
 
