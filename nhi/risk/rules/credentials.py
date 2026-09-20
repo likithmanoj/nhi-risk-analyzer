@@ -9,7 +9,7 @@ def analyze_stale_access_keys(user_access_keys,user_name):
              continue
         if(days.days>=90):            
                 findings.append({
-                "RuleID": "IAM_11",
+                "RuleID": "AWS_11",
                 "Severity":     "HIGH" if status == 'Active' else "LOW",
                 "IdentityType": "User",
                 "IdentityName": user_name,
@@ -40,7 +40,7 @@ def analyze_unused_keys(user_access_keys, user_name):
 
       if days_unused >= 30:
         findings.append({
-            "RuleID": "IAM_12",
+            "RuleID": "AWS_12",
             'Severity': 'HIGH',
             'IdentityType': 'User',
             'IdentityName': user_name,
@@ -56,7 +56,7 @@ def analyze_unused_keys(user_access_keys, user_name):
 
       if key_age >= 30:
         findings.append({
-           "RuleID": "IAM_12",
+           "RuleID": "AWS_12",
             'Severity': 'HIGH',
             'IdentityType': 'User',
             'IdentityName': user_name,

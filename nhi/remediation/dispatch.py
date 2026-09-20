@@ -5,6 +5,24 @@ from nhi.remediation.handlers.policy import handle_policy_remediation
 from nhi.remediation.handlers.tags import remediate_missing_tags
 
 HANDLER_MAP = {
+    # AWS Non-Human Identity Rules
+    "AWS_01": handle_policy_remediation,
+    "AWS_02": handle_policy_remediation,
+    "AWS_03": handle_policy_remediation,
+    "AWS_04": handle_policy_remediation,
+    "AWS_05": handle_policy_remediation,
+    "AWS_06": handle_policy_remediation,
+    "AWS_07": handle_policy_remediation,
+    "AWS_08": handle_policy_remediation,
+    "AWS_09": handle_policy_remediation,
+    "AWS_10": handle_policy_remediation,
+    "AWS_11": handle_credential_remediation,
+    "AWS_12": handle_credential_remediation,
+    "AWS_14": handle_policy_remediation,
+    "AWS_15": handle_policy_remediation,
+    "AWS_16": handle_policy_remediation,
+    "TAG_01": remediate_missing_tags,
+    # Backward compatibility aliases
     "IAM_01": handle_policy_remediation,
     "IAM_02": handle_policy_remediation,
     "IAM_03": handle_policy_remediation,
@@ -20,7 +38,6 @@ HANDLER_MAP = {
     "IAM_14": handle_policy_remediation,
     "IAM_15": handle_policy_remediation,
     "IAM_16": handle_policy_remediation,
-    "TAG_01": remediate_missing_tags,
 }
 
 logger = logging.getLogger(__name__)
@@ -36,8 +53,8 @@ def dispatch_remediation(findings: list, dry_run: bool = True) -> dict:
 
         if finding.get("RemediationEligible") is False or (
             finding.get("IdentityType") == "Group"
-            and rule_id.startswith("IAM_")
-            and rule_id not in ("IAM_11", "IAM_12")
+            and (rule_id.startswith("IAM_") or rule_id.startswith("AWS_"))
+            and rule_id not in ("IAM_11", "IAM_12", "AWS_11", "AWS_12")
         ):
             manual_review_required += 1
             logger.info(f"Manual review required (not auto-remediable): {finding}")

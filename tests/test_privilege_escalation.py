@@ -87,7 +87,7 @@ class TestSetDefaultPolicyVersion(unittest.TestCase):
         }]
         findings = analyze_policy_for_set_policy_version(policy, "Role", "TestRole")
         self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0]["RuleID"], "IAM_09")
+        self.assertEqual(findings[0]["RuleID"], "AWS_09")
         self.assertEqual(findings[0]["Severity"], "CRITICAL")
 
 

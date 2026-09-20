@@ -54,3 +54,6 @@ dist/
 # Test & local export outputs
 *.csv
 *.sarif
+
+experiments/interview_drills/
+*.agents

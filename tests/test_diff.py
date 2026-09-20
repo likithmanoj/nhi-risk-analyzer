@@ -3,15 +3,15 @@ from nhi.remediation.diff import diff_findings, get_finding_key
 
 
 def test_get_finding_key_handles_missing_policy_name():
-    finding = {"IdentityName": "AppRole", "RuleID": "IAM_01"}
-    assert get_finding_key(finding) == ("AppRole", "IAM_01", "")
+    finding = {"IdentityName": "AppRole", "RuleID": "AWS_01"}
+    assert get_finding_key(finding) == ("AppRole", "AWS_01", "")
 
 
 def test_diff_findings_first_scan_all_new():
     previous = []
     current = [
-        {"IdentityName": "DeployerRole", "RuleID": "IAM_01", "PolicyName": "FullAdmin"},
-        {"IdentityName": "LambdaRunner", "RuleID": "IAM_02", "PolicyName": "S3Wildcard"},
+        {"IdentityName": "DeployerRole", "RuleID": "AWS_01", "PolicyName": "FullAdmin"},
+        {"IdentityName": "LambdaRunner", "RuleID": "AWS_02", "PolicyName": "S3Wildcard"},
     ]
 
     result = diff_findings(previous, current)
@@ -27,16 +27,16 @@ def test_diff_findings_first_scan_all_new():
 def test_diff_findings_categorization():
     previous = [
         # Will be resolved (absent in current)
-        {"IdentityName": "StaleServiceRole", "RuleID": "IAM_03", "PolicyName": "OldPolicy"},
+        {"IdentityName": "StaleServiceRole", "RuleID": "AWS_03", "PolicyName": "OldPolicy"},
         # Will remain unresolved (present in both)
-        {"IdentityName": "AppRole", "RuleID": "IAM_01", "PolicyName": "AdminPolicy"},
+        {"IdentityName": "AppRole", "RuleID": "AWS_01", "PolicyName": "AdminPolicy"},
     ]
 
     current = [
         # Unresolved
-        {"IdentityName": "AppRole", "RuleID": "IAM_01", "PolicyName": "AdminPolicy"},
+        {"IdentityName": "AppRole", "RuleID": "AWS_01", "PolicyName": "AdminPolicy"},
         # New finding
-        {"IdentityName": "WorkerRole", "RuleID": "IAM_02", "PolicyName": "WriteAccess"},
+        {"IdentityName": "WorkerRole", "RuleID": "AWS_02", "PolicyName": "WriteAccess"},
     ]
 
     result = diff_findings(previous, current)

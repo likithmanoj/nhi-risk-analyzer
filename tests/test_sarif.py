@@ -33,7 +33,7 @@ def test_map_severity_to_sarif_level_fallback():
 
 def test_build_sarif_result():
     finding = {
-        "RuleID": "IAM_04",
+        "RuleID": "AWS_04",
         "Severity": "HIGH",
         "Title": "Privilege Escalation via iam:PassRole",
         "IdentityType": "Role",
@@ -42,7 +42,7 @@ def test_build_sarif_result():
     }
     result = build_sarif_result(finding)
 
-    assert result["ruleId"] == "IAM_04"
+    assert result["ruleId"] == "AWS_04"
     assert result["level"] == "error"
     assert "Privilege Escalation via iam:PassRole" in result["message"]["text"]
     assert "(Target: Role/deployer-role, Resource: *)" in result["message"]["text"]
@@ -56,22 +56,22 @@ def test_build_sarif_result():
 
 def test_build_sarif_rules_deduplication():
     findings = [
-        {"RuleID": "IAM_01", "Severity": "HIGH", "Title": "Wildcard Actions"},
-        {"RuleID": "IAM_01", "Severity": "HIGH", "Title": "Wildcard Actions"},
-        {"RuleID": "IAM_02", "Severity": "LOW", "Title": "Wildcard Resources"},
+        {"RuleID": "AWS_01", "Severity": "HIGH", "Title": "Wildcard Actions"},
+        {"RuleID": "AWS_01", "Severity": "HIGH", "Title": "Wildcard Actions"},
+        {"RuleID": "AWS_02", "Severity": "LOW", "Title": "Wildcard Resources"},
     ]
     rules = build_sarif_rules(findings)
 
     assert len(rules) == 2
     rule_ids = {r["id"] for r in rules}
-    assert rule_ids == {"IAM_01", "IAM_02"}
+    assert rule_ids == {"AWS_01", "AWS_02"}
 
 
 def test_export_findings_to_sarif(tmp_path):
     output_file = tmp_path / "results.sarif"
     findings = [
         {
-            "RuleID": "IAM_04",
+            "RuleID": "AWS_04",
             "Severity": "HIGH",
             "Title": "PassRole escalation",
             "IdentityType": "User",

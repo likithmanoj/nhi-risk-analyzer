@@ -115,25 +115,25 @@ Rather than bundling heavy, fragmented cloud SDKs (`azure-mgmt-*`, `msgraph-sdk`
 
 ## 🛡️ Rule Coverage & Remediation Mapping
 
-Rule IDs are grouped by category rather than numbered strictly sequentially — `IAM_01–03` cover general policy analysis, `IAM_04–08` cover documented privilege-escalation paths, and `IAM_11–12` cover credential hygiene. `IAM_09–10` are reserved for planned trust-policy analysis.
+Rule IDs are grouped by category rather than numbered strictly sequentially — `AWS_01–03` cover general policy analysis, `AWS_04–08` cover documented privilege-escalation paths, and `AWS_11–12` cover credential hygiene. `AWS_09–10` are reserved for planned trust-policy analysis.
 
 | Rule ID      | Name                                                          | Category              | Severity                                 | Status         | Remediation Action                                       |
 | :----------- | :------------------------------------------------------------ | :-------------------- | :--------------------------------------- | :------------- | :------------------------------------------------------- |
-| **`IAM_01`** | Wildcard Actions in Policies                                  | Policy Analysis       | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`IAM_02`** | Wildcard Resources in Policies                                | Policy Analysis       | `HIGH` / `LOW` (scoped-prefix downgrade) | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`IAM_03`** | Full Administrator Access                                     | Policy Analysis       | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (detach planned for Phase 5) |
-| **`IAM_04`** | Privilege Escalation via `iam:PassRole`                       | Privilege Escalation  | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`IAM_05`** | Privilege Escalation via `iam:CreatePolicyVersion`            | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`IAM_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`)    | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`IAM_07`** | Privilege Escalation via `iam:CreateAccessKey`                | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`IAM_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`)     | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`IAM_09`** | Privilege Escalation via `iam:SetDefaultPolicyVersion`        | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`IAM_10`** | Permissive Role Trust Policies (`*` AssumeRole Principal)     | Trust Policy Analysis | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`IAM_11`** | Stale Access Keys (>90 Days Old)                              | Credential Security   | `HIGH` / `LOW`                           | ✅ Implemented | Deactivate Key (`Status: Inactive`)                      |
-| **`IAM_12`** | Unused & Dormant Access Keys (>30 Days)                       | Credential Security   | `HIGH`                                   | ✅ Implemented | Deactivate Key (`Status: Inactive`)                      |
-| **`IAM_14`** | Unrestricted S3 Data Exfiltration (`s3:GetObject*`, `s3:*`)   | Data Perimeter        | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`IAM_15`** | Security Defense Evasion (CloudTrail/GuardDuty/KMS tampering) | Resource Protection   | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`IAM_16`** | Unrestricted KMS Decryption (`kms:Decrypt`, `kms:*`)          | Data Perimeter        | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_01`** | Wildcard Actions in Policies                                  | Policy Analysis       | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_02`** | Wildcard Resources in Policies                                | Policy Analysis       | `HIGH` / `LOW` (scoped-prefix downgrade) | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_03`** | Full Administrator Access                                     | Policy Analysis       | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (detach planned for Phase 5) |
+| **`AWS_04`** | Privilege Escalation via `iam:PassRole`                       | Privilege Escalation  | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
+| **`AWS_05`** | Privilege Escalation via `iam:CreatePolicyVersion`            | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
+| **`AWS_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`)    | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
+| **`AWS_07`** | Privilege Escalation via `iam:CreateAccessKey`                | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
+| **`AWS_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`)     | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
+| **`AWS_09`** | Privilege Escalation via `iam:SetDefaultPolicyVersion`        | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
+| **`AWS_10`** | Permissive Role Trust Policies (`*` AssumeRole Principal)     | Trust Policy Analysis | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_11`** | Stale Access Keys (>90 Days Old)                              | Credential Security   | `HIGH` / `LOW`                           | ✅ Implemented | Deactivate Key (`Status: Inactive`)                      |
+| **`AWS_12`** | Unused & Dormant Access Keys (>30 Days)                       | Credential Security   | `HIGH`                                   | ✅ Implemented | Deactivate Key (`Status: Inactive`)                      |
+| **`AWS_14`** | Unrestricted S3 Data Exfiltration (`s3:GetObject*`, `s3:*`)   | Data Perimeter        | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_15`** | Security Defense Evasion (CloudTrail/GuardDuty/KMS tampering) | Resource Protection   | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_16`** | Unrestricted KMS Decryption (`kms:Decrypt`, `kms:*`)          | Data Perimeter        | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
 | **`TAG_01`** | Missing Mandatory Governance Tags (`Owner`, `Environment`)    | Governance & Tagging  | `LOW`                                    | ✅ Implemented | Apply Mandatory Tags                                     |
 
 **Detection methodology sources:** Rules are informed by Rhino Security Labs' documented AWS IAM privilege escalation research (21 methods), Salesforce's Cloudsplaining policy-severity methodology, the CIS AWS Foundations Benchmark (credential hygiene thresholds), and AWS's own IAM best-practices documentation.
@@ -142,7 +142,7 @@ Rule IDs are grouped by category rather than numbered strictly sequentially — 
 
 ```json
 {
-  "RuleID": "IAM_03",
+  "RuleID": "AWS_03",
   "IdentityType": "User",
   "IdentityName": "pam-suite-admin",
   "PolicyName": "IAMFullAccess",
@@ -217,7 +217,7 @@ exemptions:
 ```
 
 - **Exempt All Rules:** `rules: ["*"]`
-- **Exempt Specific Rules:** `rules: ["IAM_01", "IAM_03"]` (allows credential hygiene deactivations `IAM_11`/`IAM_12` while skipping policy boundaries).
+- **Exempt Specific Rules:** `rules: ["AWS_01", "AWS_03"]` (allows credential hygiene deactivations `AWS_11`/`AWS_12` while skipping policy boundaries).
 
 ---
 
@@ -242,7 +242,7 @@ The architecture decouples offline rule evaluation from remediation dispatching,
    ```python
    HANDLER_MAP = {
        ...
-       "IAM_09": handle_custom_remediation,
+       "AWS_09": handle_custom_remediation,
    }
    ```
 3. Add unit tests with mock injections under `tests/`.
@@ -304,7 +304,7 @@ The architecture decouples offline rule evaluation from remediation dispatching,
   - Implement automated AST document rewrites via `policy_surgery.py` for inline policies.
   - Statement partitioning: Separate non-resource discovery APIs (`Describe*`, `List*`) from scoped resource mutations (`Put*`, `Get*`, `Decrypt`).
   - Rollback journaling: Save the pre-surgery policy JSON snapshot to S3 before executing `PutUserPolicy` / `PutRolePolicy` updates.
-- **Direct AdministratorAccess Detachment:** Dedicated handler for `IAM_03` to cleanly detach root-equivalent managed policies.
+- **Direct AdministratorAccess Detachment:** Dedicated handler for `AWS_03` to cleanly detach root-equivalent managed policies.
 - **Target-Level Remediation Deduplication:** Coalesce multi-finding dispatches to execute single, unified remediation calls per IAM identity.
 
 #### Phase 6: Team Communication & Event Notifications

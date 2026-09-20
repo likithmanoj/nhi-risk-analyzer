@@ -1,31 +1,31 @@
 import argparse
 from nhi.services.inventory import create_inventory
 from nhi.risk.rules.wildcards import (
-    analyze_policy,                                    # IAM_01 (Wildcard Actions), IAM_02 (Wildcard Resources), IAM_03 (Admin-equivalent)
-    analyze_admin_access,                              # IAM_03 (AdministratorAccess managed policy)
+    analyze_policy,                                    # AWS_01 (Wildcard Actions), AWS_02 (Wildcard Resources), AWS_03 (Admin-equivalent)
+    analyze_admin_access,                              # AWS_03 (AdministratorAccess managed policy)
 )
 from nhi.risk.rules.credentials import (
-    analyze_stale_access_keys,                         # IAM_11 (Stale Access Keys >90 days)
-    analyze_unused_keys,                               # IAM_12 (Unused Access Keys >30 days)
+    analyze_stale_access_keys,                         # AWS_11 (Stale Access Keys >90 days)
+    analyze_unused_keys,                               # AWS_12 (Unused Access Keys >30 days)
 )
 from nhi.risk.rules.privilege_escalation import (
-    analyze_passrole_with_wildcard,                    # IAM_04 (PassRole escalation)
-    analyze_create_policy_version,                     # IAM_05 (CreatePolicyVersion escalation)
-    analyze_policy_for_policy_attachment_escalation,   # IAM_06 (Policy attachment escalation)
-    analyze_access_key_creation_escalation,            # IAM_07 (CreateAccessKey escalation)
-    analyze_console_access_escalation,                 # IAM_08 (LoginProfile escalation)
-    analyze_policy_for_set_policy_version,             # IAM_09 (SetDefaultPolicyVersion escalation)
+    analyze_passrole_with_wildcard,                    # AWS_04 (PassRole escalation)
+    analyze_create_policy_version,                     # AWS_05 (CreatePolicyVersion escalation)
+    analyze_policy_for_policy_attachment_escalation,   # AWS_06 (Policy attachment escalation)
+    analyze_access_key_creation_escalation,            # AWS_07 (CreateAccessKey escalation)
+    analyze_console_access_escalation,                 # AWS_08 (LoginProfile escalation)
+    analyze_policy_for_set_policy_version,             # AWS_09 (SetDefaultPolicyVersion escalation)
 )
 from nhi.risk.rules.data_perimeter import (
-    analyze_policy_for_s3_exfiltration,                # IAM_14 (S3 Exfiltration)
-    analyze_policy_for_kms_decryption,                 # IAM_16 (KMS Decryption)
+    analyze_policy_for_s3_exfiltration,                # AWS_14 (S3 Exfiltration)
+    analyze_policy_for_kms_decryption,                 # AWS_16 (KMS Decryption)
 )
 from nhi.risk.rules.resource_protection import (
-    analyze_policy_for_defense_evasion,                # IAM_15 (Defense Evasion / Log tampering)
+    analyze_policy_for_defense_evasion,                # AWS_15 (Defense Evasion / Log tampering)
 )
 from nhi.remediation.dispatch import dispatch_remediation
 from nhi.risk.rules.tags import analyze_mandatory_tags # TAG_01 (Missing mandatory tags)
-from nhi.risk.rules.trust_policy import analyze_trust_policy # IAM_10 (Permissive trust policies
+from nhi.risk.rules.trust_policy import analyze_trust_policy # AWS_10 (Permissive trust policies)
 from datetime import datetime, timezone
 from nhi.aws.s3 import fetch_latest_scan, persist_scan_artifact
 from nhi.remediation.diff import diff_findings

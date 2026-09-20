@@ -25,7 +25,7 @@ def test_defense_evasion_tampering_actions(action):
     }]
     findings = analyze_policy_for_defense_evasion(policy, "Role", "TestRole")
     assert len(findings) == 1
-    assert findings[0]["RuleID"] == "IAM_15"
+    assert findings[0]["RuleID"] == "AWS_15"
     assert findings[0]["Severity"] == "CRITICAL"
 
 

@@ -10,7 +10,7 @@ locals {
 }
 
 # ------------------------------------------------------------------------------
-# 1. CANARY USER 1: Wildcards & AdministratorAccess (IAM_01, IAM_02, IAM_03)
+# 1. CANARY USER 1: Wildcards & AdministratorAccess (AWS_01, AWS_02, AWS_03)
 # ------------------------------------------------------------------------------
 resource "aws_iam_user" "canary_user_wildcards" {
   name          = "nhi-canary-user-wildcards"
@@ -41,7 +41,7 @@ resource "aws_iam_user_policy_attachment" "canary_admin_attach" {
 }
 
 # ------------------------------------------------------------------------------
-# 2. CANARY USER 2: Credential Hygiene (IAM_11, IAM_12)
+# 2. CANARY USER 2: Credential Hygiene (AWS_11, AWS_12)
 # ------------------------------------------------------------------------------
 resource "aws_iam_user" "canary_user_credentials" {
   name          = "nhi-canary-user-credentials"
@@ -55,7 +55,7 @@ resource "aws_iam_access_key" "canary_test_key" {
 }
 
 # ------------------------------------------------------------------------------
-# 3. CANARY ROLE 1: PassRole Escalation (IAM_04)
+# 3. CANARY ROLE 1: PassRole Escalation (AWS_04)
 # ------------------------------------------------------------------------------
 data "aws_caller_identity" "current" {}
 
@@ -100,7 +100,7 @@ resource "aws_iam_role_policy" "canary_passrole_policy" {
 }
 
 # ------------------------------------------------------------------------------
-# 4. CANARY ROLE 2: Policy Versioning & Attachment Escalation (IAM_05, IAM_06)
+# 4. CANARY ROLE 2: Policy Versioning & Attachment Escalation (AWS_05, AWS_06)
 # ------------------------------------------------------------------------------
 resource "aws_iam_role" "canary_role_policy_escalation" {
   name = "nhi-canary-role-policy-escalation"
@@ -147,7 +147,7 @@ resource "aws_iam_role_policy" "canary_policy_escalation_policy" {
 }
 
 # ------------------------------------------------------------------------------
-# 5. CANARY ROLE 3: Credential Escalation (IAM_07, IAM_08)
+# 5. CANARY ROLE 3: Credential Escalation (AWS_07, AWS_08)
 # ------------------------------------------------------------------------------
 resource "aws_iam_role" "canary_role_cred_escalation" {
   name = "nhi-canary-role-cred-escalation"
@@ -194,7 +194,7 @@ resource "aws_iam_role_policy" "canary_cred_escalation_policy" {
 }
 
 # ------------------------------------------------------------------------------
-# 6. CANARY ROLE 4: Set Default Policy Version Escalation (IAM_09)
+# 6. CANARY ROLE 4: Set Default Policy Version Escalation (AWS_09)
 # ------------------------------------------------------------------------------
 resource "aws_iam_role" "canary_role_set_policy_version" {
   name = "nhi-canary-role-set-policy-version"
@@ -232,11 +232,11 @@ resource "aws_iam_role_policy" "canary_set_policy_version_policy" {
 }
 
 # ------------------------------------------------------------------------------
-# 7. CANARY ROLE 5: Permissive Trust Policy (IAM_10)
+# 7. CANARY ROLE 5: Permissive Trust Policy (AWS_10)
 # ------------------------------------------------------------------------------
 resource "aws_iam_role" "nhi_canary_role_permissive_trust" {
   name        = "nhi-canary-role-permissive-trust"
-  description = "Test canary for IAM_10: Public unconstrained sts:AssumeRole trust policy"
+  description = "Test canary for AWS_10: Public unconstrained sts:AssumeRole trust policy"
   tags        = local.canary_tags
 
   assume_role_policy = jsonencode({
@@ -254,7 +254,7 @@ resource "aws_iam_role" "nhi_canary_role_permissive_trust" {
 }
 
 # ------------------------------------------------------------------------------
-# 8. CANARY ROLE 6: Data Perimeter Exfiltration & Decryption (IAM_14, IAM_16)
+# 8. CANARY ROLE 6: Data Perimeter Exfiltration & Decryption (AWS_14, AWS_16)
 # ------------------------------------------------------------------------------
 resource "aws_iam_role" "canary_role_data_perimeter" {
   name = "nhi-canary-role-data-perimeter"
@@ -298,7 +298,7 @@ resource "aws_iam_role_policy" "canary_data_perimeter_policy" {
 }
 
 # ------------------------------------------------------------------------------
-# 9. CANARY ROLE 7: Security Defense Evasion (IAM_15)
+# 9. CANARY ROLE 7: Security Defense Evasion (AWS_15)
 # ------------------------------------------------------------------------------
 resource "aws_iam_role" "canary_role_defense_evasion" {
   name = "nhi-canary-role-defense-evasion"

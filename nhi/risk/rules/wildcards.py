@@ -17,7 +17,7 @@ def analyze_admin_access(policies, identityType, identityName):
         arn = policy.get("PolicyArn")
         if arn in KNOWN_DANGEROUS_MANAGED_POLICIES:
             findings.append({
-                "RuleID": "IAM_03",
+                "RuleID": "AWS_03",
                 "Severity": "CRITICAL",
                 "IdentityType": identityType,
                 "IdentityName": identityName,
@@ -50,7 +50,7 @@ def analyze_policy(policies,identityType,identityName):
                 continue
             if actions_findings and resources_findings:
                     findings.append({
-                    "RuleID": "IAM_03",
+                    "RuleID": "AWS_03",
                     "Severity": "CRITICAL",
                     "IdentityType":identityType,
                     "IdentityName": identityName,
@@ -66,7 +66,7 @@ def analyze_policy(policies,identityType,identityName):
                 for resource in resources_findings:
                     is_scoped = resource.get("Type") == "SCOPED_PREFIX"
                     findings.append({
-                    "RuleID": "IAM_02",
+                    "RuleID": "AWS_02",
                     "Severity": "LOW" if is_scoped else "HIGH",
                     "IdentityType": identityType,
                     "IdentityName": identityName,
@@ -79,7 +79,7 @@ def analyze_policy(policies,identityType,identityName):
                 for action in actions_findings:
                     findings.append(
                     {  
-                        "RuleID": "IAM_01",
+                        "RuleID": "AWS_01",
                         "Severity": "HIGH",
                        "IdentityType":identityType,
                        "IdentityName": identityName,
