@@ -1,14 +1,14 @@
 import argparse
 from nhi.services.inventory import create_inventory
-from nhi.risk.rules.wildcards import (
+from nhi.risk.rules.aws.wildcards import (
     analyze_policy,                                    # AWS_01 (Wildcard Actions), AWS_02 (Wildcard Resources), AWS_03 (Admin-equivalent)
     analyze_admin_access,                              # AWS_03 (AdministratorAccess managed policy)
 )
-from nhi.risk.rules.credentials import (
+from nhi.risk.rules.aws.credentials import (
     analyze_stale_access_keys,                         # AWS_11 (Stale Access Keys >90 days)
     analyze_unused_keys,                               # AWS_12 (Unused Access Keys >30 days)
 )
-from nhi.risk.rules.privilege_escalation import (
+from nhi.risk.rules.aws.privilege_escalation import (
     analyze_passrole_with_wildcard,                    # AWS_04 (PassRole escalation)
     analyze_create_policy_version,                     # AWS_05 (CreatePolicyVersion escalation)
     analyze_policy_for_policy_attachment_escalation,   # AWS_06 (Policy attachment escalation)
@@ -16,16 +16,16 @@ from nhi.risk.rules.privilege_escalation import (
     analyze_console_access_escalation,                 # AWS_08 (LoginProfile escalation)
     analyze_policy_for_set_policy_version,             # AWS_09 (SetDefaultPolicyVersion escalation)
 )
-from nhi.risk.rules.data_perimeter import (
+from nhi.risk.rules.aws.data_perimeter import (
     analyze_policy_for_s3_exfiltration,                # AWS_14 (S3 Exfiltration)
     analyze_policy_for_kms_decryption,                 # AWS_16 (KMS Decryption)
 )
-from nhi.risk.rules.resource_protection import (
+from nhi.risk.rules.aws.resource_protection import (
     analyze_policy_for_defense_evasion,                # AWS_15 (Defense Evasion / Log tampering)
 )
 from nhi.remediation.dispatch import dispatch_remediation
-from nhi.risk.rules.tags import analyze_mandatory_tags # TAG_01 (Missing mandatory tags)
-from nhi.risk.rules.trust_policy import analyze_trust_policy # AWS_10 (Permissive trust policies)
+from nhi.risk.rules.aws.tags import analyze_mandatory_tags # TAG_01 (Missing mandatory tags)
+from nhi.risk.rules.aws.trust_policy import analyze_trust_policy # AWS_10 (Permissive trust policies)
 from datetime import datetime, timezone
 from nhi.aws.s3 import fetch_latest_scan, persist_scan_artifact
 from nhi.remediation.diff import diff_findings

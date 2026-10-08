@@ -1,5 +1,5 @@
 import pytest
-from nhi.risk.rules.data_perimeter import (
+from nhi.risk.rules.aws.data_perimeter import (
     analyze_policy_for_s3_exfiltration,
     analyze_policy_for_kms_decryption,
 )

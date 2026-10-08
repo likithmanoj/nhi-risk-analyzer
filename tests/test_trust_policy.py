@@ -1,5 +1,5 @@
 import pytest
-from nhi.risk.rules.trust_policy import analyze_trust_policy
+from nhi.risk.rules.aws.trust_policy import analyze_trust_policy
 
 
 def test_permissive_trust_policy_wildcard_string():

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import unittest
 
-from nhi.risk.rules.credentials import analyze_unused_keys
+from nhi.risk.rules.aws.credentials import analyze_unused_keys
 
 
 class TestAnalyzeUnusedKeys(unittest.TestCase):

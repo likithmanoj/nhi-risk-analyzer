@@ -1,5 +1,5 @@
 import pytest
-from nhi.risk.rules.resource_protection import analyze_policy_for_defense_evasion
+from nhi.risk.rules.aws.resource_protection import analyze_policy_for_defense_evasion
 
 
 @pytest.mark.parametrize("action", [

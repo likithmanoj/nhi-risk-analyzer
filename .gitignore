@@ -57,3 +57,6 @@ dist/
 
 experiments/interview_drills/
 *.agents
+
+# Documentation & internal roadmaps
+docs/
