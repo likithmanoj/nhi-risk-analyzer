@@ -19,7 +19,7 @@ class TestPolicyRemediationHandler:
 
     def test_policy_dry_run_user(self):
         finding = {
-            "RuleID": "IAM_01",
+            "RuleID": "AWS_01",
             "IdentityType": "User",
             "IdentityName": "test-runner-user"
         }
@@ -28,7 +28,7 @@ class TestPolicyRemediationHandler:
 
     def test_policy_dry_run_role(self):
         finding = {
-            "RuleID": "IAM_04",
+            "RuleID": "AWS_04",
             "IdentityType": "Role",
             "IdentityName": "test-runner-role"
         }
@@ -39,7 +39,7 @@ class TestPolicyRemediationHandler:
     def test_policy_live_remediation_user_success(self, mock_set_user_boundary):
         mock_set_user_boundary.return_value = True
         finding = {
-            "RuleID": "IAM_01",
+            "RuleID": "AWS_01",
             "IdentityType": "User",
             "IdentityName": "test-runner-user"
         }
@@ -54,7 +54,7 @@ class TestPolicyRemediationHandler:
     def test_policy_live_remediation_role_success(self, mock_set_role_boundary):
         mock_set_role_boundary.return_value = True
         finding = {
-            "RuleID": "IAM_04",
+            "RuleID": "AWS_04",
             "IdentityType": "Role",
             "IdentityName": "test-runner-role"
         }
@@ -68,7 +68,7 @@ class TestPolicyRemediationHandler:
     def test_policy_missing_boundary_arn(self, monkeypatch):
         monkeypatch.delenv("NHI_BOUNDARY_POLICY_ARN", raising=False)
         finding = {
-            "RuleID": "IAM_01",
+            "RuleID": "AWS_01",
             "IdentityType": "User",
             "IdentityName": "test-user"
         }
@@ -77,7 +77,7 @@ class TestPolicyRemediationHandler:
 
     def test_policy_group_fallback(self):
         finding = {
-            "RuleID": "IAM_01",
+            "RuleID": "AWS_01",
             "IdentityType": "Group",
             "IdentityName": "test-admin-group"
         }
@@ -87,7 +87,7 @@ class TestPolicyRemediationHandler:
 
     def test_policy_missing_identity_name(self):
         finding = {
-            "RuleID": "IAM_01",
+            "RuleID": "AWS_01",
             "IdentityType": "User"
         }
         result = handle_policy_remediation(finding, dry_run=False)
@@ -102,7 +102,7 @@ class TestCredentialRemediationHandler:
 
     def test_credential_dry_run(self):
         finding = {
-            "RuleID": "IAM_11",
+            "RuleID": "AWS_11",
             "IdentityName": "test-user",
             "TargetID": "AKIA123456789EXAMPLE"
         }
@@ -113,7 +113,7 @@ class TestCredentialRemediationHandler:
     def test_credential_live_remediation_success(self, mock_update_key):
         mock_update_key.return_value = {"HTTPStatusCode": 200}
         finding = {
-            "RuleID": "IAM_11",
+            "RuleID": "AWS_11",
             "IdentityName": "test-user",
             "TargetID": "AKIA123456789EXAMPLE"
         }
@@ -125,7 +125,7 @@ class TestCredentialRemediationHandler:
     def test_credential_live_remediation_failure(self, mock_update_key):
         mock_update_key.return_value = None
         finding = {
-            "RuleID": "IAM_12",
+            "RuleID": "AWS_12",
             "IdentityName": "test-user",
             "TargetID": "AKIA123456789EXAMPLE"
         }
@@ -133,7 +133,7 @@ class TestCredentialRemediationHandler:
         assert result is False
 
     def test_credential_missing_fields(self):
-        finding = {"RuleID": "IAM_11", "IdentityName": "test-user"}
+        finding = {"RuleID": "AWS_11", "IdentityName": "test-user"}
         result = handle_credential_remediation(finding, dry_run=False)
         assert result is False
 
@@ -154,18 +154,18 @@ class TestDispatchRemediation:
         # Finding 2: Key (Skipped via exemption)
         # Finding 3: Unknown rule (Failed)
         findings = [
-            {"RuleID": "IAM_01", "IdentityType": "User", "IdentityName": "user-1"},
-            {"RuleID": "IAM_11", "IdentityName": "user-2", "TargetID": "AKIA1"},
-            {"RuleID": "IAM_99_UNKNOWN", "IdentityName": "user-3"}
+            {"RuleID": "AWS_01", "IdentityType": "User", "IdentityName": "user-1"},
+            {"RuleID": "AWS_11", "IdentityName": "user-2", "TargetID": "AKIA1"},
+            {"RuleID": "AWS_99_UNKNOWN", "IdentityName": "user-3"}
         ]
 
         def mock_ignored_side_effect(finding, exemptions):
-            return finding.get("RuleID") == "IAM_11"
+            return finding.get("RuleID") == "AWS_11"
 
         mock_is_ignored.side_effect = mock_ignored_side_effect
 
         mock_policy_handler = MagicMock(return_value=True)
-        mock_handler_map.get.side_effect = lambda rule: mock_policy_handler if rule == "IAM_01" else None
+        mock_handler_map.get.side_effect = lambda rule: mock_policy_handler if rule == "AWS_01" else None
 
         # 1. Assert DRY-RUN returns 'would_remediate'
         dry_run_stats = dispatch_remediation(findings, dry_run=True)

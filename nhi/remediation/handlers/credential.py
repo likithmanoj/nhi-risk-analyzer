@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 def handle_credential_remediation(finding: dict, dry_run: bool = True) -> bool:
-    """Handler for Credential findings (IAM_11, IAM_12)."""
+    """Handler for Credential findings (AWS_11, AWS_12)."""
     identity_name = finding.get("IdentityName")
     target_id = finding.get("TargetID")
 

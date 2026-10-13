@@ -1,5 +1,5 @@
 import pytest
-from nhi.risk.rules.trust_policy import analyze_trust_policy
+from nhi.risk.rules.aws.trust_policy import analyze_trust_policy
 
 
 def test_permissive_trust_policy_wildcard_string():
@@ -16,7 +16,7 @@ def test_permissive_trust_policy_wildcard_string():
 
     findings = analyze_trust_policy(trust_policy, "test-role-permissive")
     assert len(findings) == 1
-    assert findings[0]["RuleID"] == "IAM_10"
+    assert findings[0]["RuleID"] == "AWS_10"
     assert findings[0]["Severity"] == "CRITICAL"
     assert findings[0]["IdentityName"] == "test-role-permissive"
 
@@ -35,7 +35,7 @@ def test_permissive_trust_policy_aws_dict_wildcard():
 
     findings = analyze_trust_policy(trust_policy, "test-role-permissive-dict")
     assert len(findings) == 1
-    assert findings[0]["RuleID"] == "IAM_10"
+    assert findings[0]["RuleID"] == "AWS_10"
 
 
 def test_permissive_trust_policy_aws_list_wildcard():
@@ -52,7 +52,7 @@ def test_permissive_trust_policy_aws_list_wildcard():
 
     findings = analyze_trust_policy(trust_policy, "test-role-permissive-list")
     assert len(findings) == 1
-    assert findings[0]["RuleID"] == "IAM_10"
+    assert findings[0]["RuleID"] == "AWS_10"
 
 
 def test_safe_trust_policy_specific_account():

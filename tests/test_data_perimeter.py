@@ -1,5 +1,5 @@
 import pytest
-from nhi.risk.rules.data_perimeter import (
+from nhi.risk.rules.aws.data_perimeter import (
     analyze_policy_for_s3_exfiltration,
     analyze_policy_for_kms_decryption,
 )
@@ -21,7 +21,7 @@ def test_s3_exfiltration_unconstrained_resource(action):
     }]
     findings = analyze_policy_for_s3_exfiltration(policy, "Role", "TestRole")
     assert len(findings) == 1
-    assert findings[0]["RuleID"] == "IAM_14"
+    assert findings[0]["RuleID"] == "AWS_14"
     assert findings[0]["Severity"] == "HIGH"
 
 
@@ -58,7 +58,7 @@ def test_kms_decryption_unconstrained_resource(action):
     }]
     findings = analyze_policy_for_kms_decryption(policy, "Role", "TestRole")
     assert len(findings) == 1
-    assert findings[0]["RuleID"] == "IAM_16"
+    assert findings[0]["RuleID"] == "AWS_16"
     assert findings[0]["Severity"] == "HIGH"
 
 

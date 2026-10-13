@@ -6,9 +6,9 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 
 def test_remediation_dispatch():
     mock_findings = [
-        # Case 1: Valid IAM_11 finding -> Should pass payload guard and simulate remediation
+        # Case 1: Valid AWS_11 finding -> Should pass payload guard and simulate remediation
         {
-            "RuleID": "IAM_11",
+            "RuleID": "AWS_11",
             "IdentityType": "user",
             "IdentityName": "app-service-user",
             "TargetID": "AKIA1111111111EXAMPLE",
@@ -16,16 +16,16 @@ def test_remediation_dispatch():
         },
         # Case 2: Malformed finding -> Missing TargetID; should trigger payload guard and return False
         {
-            "RuleID": "IAM_11",
+            "RuleID": "AWS_11",
             "IdentityType": "user",
             "IdentityName": "broken-user-payload",
             "Description": "Missing TargetID field"
         },
         # Case 3: Exemption check -> Ensure IdentityName or Rule matches an entry in your nhi-ignore.yaml
         {
-            "RuleID": "IAM_11",
+            "RuleID": "AWS_11",
             "IdentityType": "user",
-            "IdentityName": "pam-suite-admin",  # Ensure this or rule IAM_11 exists in nhi-ignore.yaml to test skipping
+            "IdentityName": "pam-suite-admin",  # Ensure this or rule AWS_11 exists in nhi-ignore.yaml to test skipping
             "TargetID": "AKIA2222222222EXAMPLE",
             "Description": "Exempted user account"
         }

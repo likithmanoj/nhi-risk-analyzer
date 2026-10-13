@@ -54,3 +54,9 @@ dist/
 # Test & local export outputs
 *.csv
 *.sarif
+
+experiments/interview_drills/
+*.agents
+
+# Documentation & internal roadmaps
+docs/

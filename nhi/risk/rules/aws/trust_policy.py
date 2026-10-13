@@ -27,7 +27,7 @@ def check_assume_role_action(action):
     return False
 
 
-def analyze_trust_policy(trust_policy: dict, role_name: str) -> list: #IAM_10
+def analyze_trust_policy(trust_policy: dict, role_name: str) -> list: #AWS_10
     findings = []
     if not trust_policy or not isinstance(trust_policy, dict):
         return findings
@@ -51,7 +51,7 @@ def analyze_trust_policy(trust_policy: dict, role_name: str) -> list: #IAM_10
 
         if check_assume_role_action(action) and check_permissive_principal(principal):
             findings.append({
-                "RuleID": "IAM_10",
+                "RuleID": "AWS_10",
                 "Severity": "CRITICAL",
                 "IdentityType": "Role",
                 "IdentityName": role_name,

@@ -3,7 +3,7 @@ from nhi.risk.helpers import (
     analyze_resources,
 )
 
-def analyze_policy_for_kms_decryption(policies, identityType, identityName): # IAM_16
+def analyze_policy_for_kms_decryption(policies, identityType, identityName): # AWS_16
     findings = []
     for policy in policies:
         statements = policy['PolicyDocument']['Statement']
@@ -16,7 +16,7 @@ def analyze_policy_for_kms_decryption(policies, identityType, identityName): # I
             for target_action in target_actions:
                 if (str(statement.get('Effect')) == "Allow") and analyze_resources(statement.get('Resource')) and match_action(statement.get('Action'), target_action):
                     findings.append({
-                        "RuleID": "IAM_16",
+                        "RuleID": "AWS_16",
                         "Severity": "HIGH",
                         "Title": f"Unrestricted KMS Decryption via {target_action}",
                         "IdentityType": identityType,
@@ -29,7 +29,7 @@ def analyze_policy_for_kms_decryption(policies, identityType, identityName): # I
                     break
     return findings
 
-def analyze_policy_for_s3_exfiltration(policies, identityType, identityName): # IAM_14
+def analyze_policy_for_s3_exfiltration(policies, identityType, identityName): # AWS_14
     findings = []
     for policy in policies:
         statements = policy['PolicyDocument']['Statement']
@@ -42,7 +42,7 @@ def analyze_policy_for_s3_exfiltration(policies, identityType, identityName): # 
             for target_action in target_actions:
                 if (str(statement.get('Effect')) == "Allow") and analyze_resources(statement.get('Resource')) and match_action(statement.get('Action'), target_action):
                     findings.append({
-                        "RuleID": "IAM_14",
+                        "RuleID": "AWS_14",
                         "Severity": "HIGH",
                         "Title": f"Unrestricted S3 Data Exfiltration via {target_action}",
                         "IdentityType": identityType,

@@ -1,5 +1,5 @@
 import pytest
-from nhi.risk.rules.resource_protection import analyze_policy_for_defense_evasion
+from nhi.risk.rules.aws.resource_protection import analyze_policy_for_defense_evasion
 
 
 @pytest.mark.parametrize("action", [
@@ -25,7 +25,7 @@ def test_defense_evasion_tampering_actions(action):
     }]
     findings = analyze_policy_for_defense_evasion(policy, "Role", "TestRole")
     assert len(findings) == 1
-    assert findings[0]["RuleID"] == "IAM_15"
+    assert findings[0]["RuleID"] == "AWS_15"
     assert findings[0]["Severity"] == "CRITICAL"
 
 

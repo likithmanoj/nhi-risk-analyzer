@@ -3,7 +3,7 @@ from nhi.risk.helpers import (
     classify_resources as classify,
     analyze_resources as analyze,
 )
-from nhi.risk.rules.privilege_escalation import analyze_policy_for_set_policy_version
+from nhi.risk.rules.aws.privilege_escalation import analyze_policy_for_set_policy_version
 
 
 class TestClassifyResources(unittest.TestCase):
@@ -87,7 +87,7 @@ class TestSetDefaultPolicyVersion(unittest.TestCase):
         }]
         findings = analyze_policy_for_set_policy_version(policy, "Role", "TestRole")
         self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0]["RuleID"], "IAM_09")
+        self.assertEqual(findings[0]["RuleID"], "AWS_09")
         self.assertEqual(findings[0]["Severity"], "CRITICAL")
 
 
