@@ -2,10 +2,7 @@
 GCP Non-Human Identity (NHI) Risk Rules.
 """
 
-from typing import Any, Dict, List
-
-
-def analyze_service_account_token_creator(iam_policy: Dict[str, Any]) -> List[Dict[str, Any]]:
+def analyze_service_account_token_creator(iam_policy):
     findings = []
     if not iam_policy or not isinstance(iam_policy, dict):
         return findings
@@ -29,7 +26,7 @@ def analyze_service_account_token_creator(iam_policy: Dict[str, Any]) -> List[Di
     return findings
 
 
-def analyze_service_account_key_admin(iam_policy: Dict[str, Any]) -> List[Dict[str, Any]]:
+def analyze_service_account_key_admin(iam_policy):
     findings = []
     if not iam_policy or not isinstance(iam_policy, dict):
         return findings
@@ -53,7 +50,7 @@ def analyze_service_account_key_admin(iam_policy: Dict[str, Any]) -> List[Dict[s
     return findings
 
 
-def analyze_service_account_user(iam_policy: Dict[str, Any]) -> List[Dict[str, Any]]:
+def analyze_service_account_user(iam_policy):
     findings = []
     if not iam_policy or not isinstance(iam_policy, dict):
         return findings
@@ -77,7 +74,7 @@ def analyze_service_account_user(iam_policy: Dict[str, Any]) -> List[Dict[str, A
     return findings
 
 
-def analyze_iam_security_admin(iam_policy: Dict[str, Any]) -> List[Dict[str, Any]]:
+def analyze_iam_security_admin(iam_policy):
     findings = []
     if not iam_policy or not isinstance(iam_policy, dict):
         return findings
@@ -101,4 +98,27 @@ def analyze_iam_security_admin(iam_policy: Dict[str, Any]) -> List[Dict[str, Any
                     })
     return findings
 
-
+def analyze_deployment_privesc(iam_policy):
+    findings = []
+    if not iam_policy or not isinstance(iam_policy, dict):
+        return findings
+    bindings = iam_policy.get("bindings") or []
+    target_roles = ("roles/cloudfunctions.developer", "roles/run.developer")
+    for binding in bindings:
+        if not isinstance(binding, dict):
+            continue
+        role = binding.get("role")
+        if role in target_roles:
+            members = binding.get("members") or []
+            for member in members:
+                if isinstance(member, str) and member.startswith("serviceAccount:"):
+                    sa_email = member.removeprefix("serviceAccount:")
+                    findings.append({
+                        "RuleID": "GCP_05",
+                        "Severity": "HIGH",
+                        "IdentityType": "ServiceAccount",
+                        "IdentityName": sa_email,
+                        "Finding": f"Privilege Escalation via Serverless Workload Deployment ({role})",
+                        "Role": role,
+                    })
+    return findings
