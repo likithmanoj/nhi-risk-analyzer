@@ -6,6 +6,7 @@ from nhi.risk.rules.gcp.privilege_escalation import (
     analyze_iam_security_admin,
     analyze_deployment_privesc,
 )
+from nhi.risk.rules.gcp.credentials import analyze_stale_service_account_keys
 
 
 class TestGCPAccessTokenCreatorRule(unittest.TestCase):
@@ -177,6 +178,67 @@ class TestGCPDeploymentPrivescRule(unittest.TestCase):
         findings = analyze_deployment_privesc(policy)
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0]["RuleID"], "GCP_05")
+
+
+class TestGCPStaleKeysRule(unittest.TestCase):
+    def test_positive_stale_user_managed_key(self):
+        sas = [
+            {
+                "email": "app-sa@project.iam.gserviceaccount.com",
+                "keys": [
+                    {
+                        "name": "projects/p/serviceAccounts/s/keys/key-123",
+                        "keyType": "USER_MANAGED",
+                        "validAfterTime": "2020-01-01T00:00:00Z",
+                    }
+                ],
+            }
+        ]
+        findings = analyze_stale_service_account_keys(sas)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["RuleID"], "GCP_06")
+        self.assertEqual(findings[0]["Severity"], "MEDIUM")
+        self.assertEqual(findings[0]["IdentityName"], "app-sa@project.iam.gserviceaccount.com")
+        self.assertEqual(findings[0]["TargetID"], "key-123")
+
+    def test_ignores_system_managed_keys(self):
+        sas = [
+            {
+                "email": "app-sa@project.iam.gserviceaccount.com",
+                "keys": [
+                    {
+                        "name": "projects/p/serviceAccounts/s/keys/system-key",
+                        "keyType": "SYSTEM_MANAGED",
+                        "validAfterTime": "2020-01-01T00:00:00Z",
+                    }
+                ],
+            }
+        ]
+        findings = analyze_stale_service_account_keys(sas)
+        self.assertEqual(findings, [])
+
+    def test_ignores_recently_created_keys(self):
+        from datetime import datetime, timezone
+        now_iso = datetime.now(timezone.utc).isoformat()
+        sas = [
+            {
+                "email": "fresh-sa@project.iam.gserviceaccount.com",
+                "keys": [
+                    {
+                        "name": "projects/p/serviceAccounts/s/keys/fresh-key",
+                        "keyType": "USER_MANAGED",
+                        "validAfterTime": now_iso,
+                    }
+                ],
+            }
+        ]
+        findings = analyze_stale_service_account_keys(sas)
+        self.assertEqual(findings, [])
+
+    def test_defensive_edge_cases(self):
+        self.assertEqual(analyze_stale_service_account_keys(None), [])
+        self.assertEqual(analyze_stale_service_account_keys({}), [])
+        self.assertEqual(analyze_stale_service_account_keys([{"keys": None}]), [])
 
 
 if __name__ == "__main__":

@@ -1,132 +1,46 @@
 import argparse
 from nhi.services.inventory import create_inventory
-from nhi.risk.rules.aws.wildcards import (
-    analyze_policy,                                    # AWS_01 (Wildcard Actions), AWS_02 (Wildcard Resources), AWS_03 (Admin-equivalent)
-    analyze_admin_access,                              # AWS_03 (AdministratorAccess managed policy)
-)
-from nhi.risk.rules.aws.credentials import (
-    analyze_stale_access_keys,                         # AWS_11 (Stale Access Keys >90 days)
-    analyze_unused_keys,                               # AWS_12 (Unused Access Keys >30 days)
-)
-from nhi.risk.rules.aws.privilege_escalation import (
-    analyze_passrole_with_wildcard,                    # AWS_04 (PassRole escalation)
-    analyze_create_policy_version,                     # AWS_05 (CreatePolicyVersion escalation)
-    analyze_policy_for_policy_attachment_escalation,   # AWS_06 (Policy attachment escalation)
-    analyze_access_key_creation_escalation,            # AWS_07 (CreateAccessKey escalation)
-    analyze_console_access_escalation,                 # AWS_08 (LoginProfile escalation)
-    analyze_policy_for_set_policy_version,             # AWS_09 (SetDefaultPolicyVersion escalation)
-)
-from nhi.risk.rules.aws.data_perimeter import (
-    analyze_policy_for_s3_exfiltration,                # AWS_14 (S3 Exfiltration)
-    analyze_policy_for_kms_decryption,                 # AWS_16 (KMS Decryption)
-)
-from nhi.risk.rules.aws.resource_protection import (
-    analyze_policy_for_defense_evasion,                # AWS_15 (Defense Evasion / Log tampering)
+from nhi.risk.runners import (
+    run_aws_checks,
+    run_azure_checks,
+    run_gcp_checks,
 )
 from nhi.remediation.dispatch import dispatch_remediation
-from nhi.risk.rules.aws.tags import analyze_mandatory_tags # TAG_01 (Missing mandatory tags)
-from nhi.risk.rules.aws.trust_policy import analyze_trust_policy # AWS_10 (Permissive trust policies)
 from datetime import datetime, timezone
 from nhi.aws.s3 import fetch_latest_scan, persist_scan_artifact
 from nhi.remediation.diff import diff_findings
 from nhi.services.export import export_findings_to_csv
 from nhi.services.sarif import export_findings_to_sarif
 
-def run_privilege_escalation_checks(policies, identity_type, identity_name):
-    """Sub-runner to execute all privilege escalation rules against a policy list."""
+
+def analyze_inventory(clouds=None):
+    response = create_inventory(clouds=clouds)
     findings = []
-    findings.extend(analyze_passrole_with_wildcard(policies, identity_type, identity_name))
-    findings.extend(analyze_create_policy_version(policies, identity_type, identity_name))
-    findings.extend(analyze_policy_for_policy_attachment_escalation(policies, identity_type, identity_name))
-    findings.extend(analyze_access_key_creation_escalation(policies, identity_type, identity_name))
-    findings.extend(analyze_console_access_escalation(policies, identity_type, identity_name))
-    findings.extend(analyze_policy_for_set_policy_version(policies, identity_type, identity_name))
-    return findings
+    scanned = response.get("metadata", {}).get("scanned_providers", [])
 
+    if "aws" in scanned and "aws" in response:
+        findings.extend(run_aws_checks(response["aws"]))
+    elif "users" in response:
+        findings.extend(run_aws_checks(response))
 
-def run_resource_protection_checks(policies, identity_type, identity_name):
-    """Sub-runner to execute data perimeter and defense evasion rules against a policy list."""
-    findings = []
-    findings.extend(analyze_policy_for_s3_exfiltration(policies, identity_type, identity_name))
-    findings.extend(analyze_policy_for_defense_evasion(policies, identity_type, identity_name))
-    findings.extend(analyze_policy_for_kms_decryption(policies, identity_type, identity_name))
-    return findings
+    if "azure" in scanned and "azure" in response:
+        findings.extend(run_azure_checks(response["azure"]))
 
-
-def analyze_inventory():
-    response = create_inventory()
-
-    users = response.get("users", [])
-    groups = response.get("groups", [])
-    roles = response.get("roles", [])
-
-    findings = []
-
-    for user in users:
-        username = user['UserName']
-        attached = user.get('AttachedPolicies', [])
-        inline = user.get('InlinePolicies', [])
-        access_keys = user.get('AccessKeys', [])      
-        findings.extend(analyze_policy(attached, "User", username))
-        findings.extend(analyze_policy(inline, "User", username))
-        findings.extend(analyze_admin_access(attached, "User", username))       
-        findings.extend(analyze_stale_access_keys(access_keys, username))
-        findings.extend(analyze_unused_keys(access_keys, username))     
-        findings.extend(run_privilege_escalation_checks(attached, "User", username))
-        findings.extend(run_privilege_escalation_checks(inline, "User", username))
-        findings.extend(run_resource_protection_checks(attached, "User", username))
-        findings.extend(run_resource_protection_checks(inline, "User", username))
-        findings.extend(analyze_mandatory_tags(user, "User"))
-
-    for group in groups:
-        group_name = group['GroupName']
-        attached = group.get('AttachedPolicies', [])
-        inline = group.get('InlinePolicies', [])      
-        findings.extend(analyze_policy(attached, "Group", group_name))
-        findings.extend(analyze_policy(inline, "Group", group_name))
-        findings.extend(analyze_admin_access(attached, "Group", group_name))     
-        findings.extend(run_privilege_escalation_checks(attached, "Group", group_name))
-        findings.extend(run_privilege_escalation_checks(inline, "Group", group_name))
-        findings.extend(run_resource_protection_checks(attached, "Group", group_name))
-        findings.extend(run_resource_protection_checks(inline, "Group", group_name))
-
-    for role in roles:
-        role_name = role['RoleName']
-        attached = role.get('AttachedPolicies', [])
-        inline = role.get('InlinePolicies', [])        
-        findings.extend(analyze_policy(attached, "Role", role_name))
-        findings.extend(analyze_policy(inline, "Role", role_name))
-        findings.extend(analyze_admin_access(attached, "Role", role_name))        
-        findings.extend(run_privilege_escalation_checks(attached, "Role", role_name))
-        findings.extend(run_privilege_escalation_checks(inline, "Role", role_name))
-        findings.extend(run_resource_protection_checks(attached, "Role", role_name))
-        findings.extend(run_resource_protection_checks(inline, "Role", role_name))
-        findings.extend(analyze_mandatory_tags(role, "Role"))
-        trust_policy = role.get("TrustPolicy", {})
-        findings.extend(analyze_trust_policy(trust_policy, role_name))
-
-    findings = enrich_findings_for_aws_managed_policies(findings)
+    if "gcp" in scanned and "gcp" in response:
+        findings.extend(run_gcp_checks(response["gcp"]))
 
     return findings
-
-def enrich_findings_for_aws_managed_policies(findings):
-    for finding in findings:
-        arn = finding.get("PolicyArn")  # note: match the exact key you actually write elsewhere
-        if arn:
-            is_aws_managed = is_aws_managed_policy(arn)
-            finding["RemediationEligible"] = not is_aws_managed
-            if is_aws_managed:
-                finding["RemediationNote"] = "AWS-managed policy — cannot be rewritten. Detach or replace with a customer-managed equivalent."
-                
-    return findings
-
-
-def is_aws_managed_policy(policy_arn) -> bool:
-    return bool(policy_arn and policy_arn.startswith("arn:aws:iam::aws:policy/"))
 
 def main():
     parser = argparse.ArgumentParser(
-        description="NHI Risk Analyzer & Remediation Engine for AWS"
+        description="NHI Risk Analyzer & Remediation Engine for Multi-Cloud (AWS, Azure, GCP)"
+    )
+
+    parser.add_argument(
+        "--cloud",
+        choices=["aws", "azure", "gcp", "all"],
+        default="all",
+        help="Target cloud provider to scan (default: all configured)",
     )
 
     group = parser.add_mutually_exclusive_group()
@@ -141,22 +55,23 @@ def main():
         help="Execute live remediation against detected findings",
     )
     parser.add_argument(
-    "--csv",
-    type=str,
-    metavar="FILEPATH",
-    help="Export detected findings to a CSV file at the specified path",
-)
+        "--csv",
+        type=str,
+        metavar="FILEPATH",
+        help="Export detected findings to a CSV file at the specified path",
+    )
     parser.add_argument(
-    "--sarif",
-    type=str,
-    metavar="FILEPATH",
-    help="Export detected findings to SARIF",
-)
+        "--sarif",
+        type=str,
+        metavar="FILEPATH",
+        help="Export detected findings to SARIF",
+    )
 
     args = parser.parse_args()
 
+    clouds = [args.cloud] if args.cloud != "all" else None
     print("[*] Running inventory and risk evaluation...")
-    all_findings = analyze_inventory()
+    all_findings = analyze_inventory(clouds=clouds)
     print(f"[*] Total current findings detected: {len(all_findings)}")
 
     if args.csv:

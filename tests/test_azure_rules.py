@@ -5,6 +5,7 @@ from nhi.risk.rules.azure.privilege_escalation import (
     analyze_vm_contributor_run_command,
     analyze_key_vault_secret_officer,
 )
+from nhi.risk.rules.azure.credentials import analyze_stale_sp_credentials
 
 
 class TestAzureSubscriptionOwnerRule(unittest.TestCase):
@@ -138,6 +139,73 @@ class TestAzureKeyVaultOfficerRule(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0]["RuleID"], "AZURE_04")
         self.assertEqual(findings[0]["Severity"], "HIGH")
+
+
+class TestAzureStaleCredentialsRule(unittest.TestCase):
+    def test_positive_credential_never_expires(self):
+        apps = [
+            {
+                "displayName": "Deployment-Pipeline-App",
+                "appId": "app-001",
+                "passwordCredentials": [
+                    {
+                        "keyId": "key-never-expires",
+                        "startDateTime": "2023-01-01T00:00:00Z",
+                        "endDateTime": None,
+                    }
+                ],
+            }
+        ]
+        findings = analyze_stale_sp_credentials(apps)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["RuleID"], "AZURE_05")
+        self.assertEqual(findings[0]["Severity"], "MEDIUM")
+        self.assertEqual(findings[0]["IdentityName"], "Deployment-Pipeline-App")
+        self.assertEqual(findings[0]["TargetID"], "key-never-expires")
+
+    def test_positive_long_lived_credential_over_180_days(self):
+        apps = [
+            {
+                "displayName": "Overprivileged-App",
+                "appId": "app-002",
+                "passwordCredentials": [
+                    {
+                        "keyId": "key-2-years",
+                        "startDateTime": "2023-01-01T00:00:00Z",
+                        "endDateTime": "2025-01-01T00:00:00Z",
+                    }
+                ],
+            }
+        ]
+        findings = analyze_stale_sp_credentials(apps, max_validity_days=180)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["RuleID"], "AZURE_05")
+
+    def test_safe_short_lived_credential(self):
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        start_iso = now.isoformat()
+        end_iso = (now + timedelta(days=90)).isoformat()
+        apps = [
+            {
+                "displayName": "Good-Practices-App",
+                "appId": "app-003",
+                "passwordCredentials": [
+                    {
+                        "keyId": "key-short",
+                        "startDateTime": start_iso,
+                        "endDateTime": end_iso,
+                    }
+                ],
+            }
+        ]
+        findings = analyze_stale_sp_credentials(apps, max_validity_days=180)
+        self.assertEqual(findings, [])
+
+    def test_defensive_edge_cases(self):
+        self.assertEqual(analyze_stale_sp_credentials(None), [])
+        self.assertEqual(analyze_stale_sp_credentials({}), [])
+        self.assertEqual(analyze_stale_sp_credentials([{"passwordCredentials": None}]), [])
 
 
 if __name__ == "__main__":

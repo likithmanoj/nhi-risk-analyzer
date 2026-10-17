@@ -8,11 +8,13 @@ An enterprise-grade, offline-first security automation platform that discovers, 
 
 ## 🌐 Multi-Cloud Identity Coverage
 
-| Cloud Provider | Identity Types Covered | Discovery Engine | Secret / Credential Inspection | Status |
-|:---|:---|:---|:---|:---|
-| 🟧 **AWS** | IAM Roles, Machine Users, Groups, Policies | Boto3 + Session Caching | Access Keys (`CreateDate`, `LastUsed`) | ✅ Supported |
-| 🟦 **Azure** | Entra ID Service Principals, App Registrations, Managed Identities | Pure REST (Graph & ARM) | Client Secrets (`passwordCredentials`), Certs (`keyCredentials`) | ✅ Discovery Ready |
-| 🟥 **GCP** | Service Accounts, Workload Identity, IAM Roles | Pure REST (IAM & Resource Mgr) | Service Account Keys (`validBeforeTime`, key type) | ✅ Discovery Ready |
+| Cloud Provider | Identity Types Covered | Discovery Engine | Secret / Credential Inspection | Rules Active | Status |
+|:---|:---|:---|:---|:---|:---|
+| 🟧 **AWS** | IAM Roles, Machine Users, Groups, Policies | Boto3 + Session Caching | Access Keys (`CreateDate`, `LastUsed`) | 13 Rules (`AWS_01`–`16`, `TAG_01`) | ✅ Supported |
+| 🟦 **Azure** | Entra ID Service Principals, App Registrations, Managed Identities | Pure REST (Graph & ARM) | Client Secrets (`passwordCredentials`), Certs (`keyCredentials`) | 5 Rules (`AZURE_01`–`05`) | ✅ Supported |
+| 🟥 **GCP** | Service Accounts, Workload Identity, IAM Roles | Pure REST (IAM & Resource Mgr) | Service Account Keys (`validAfterTime`, user-managed) | 6 Rules (`GCP_01`–`06`) | ✅ Supported |
+
+> 🧪 **Test Suite Status:** **102 passed, 4 subtests passed (100% GREEN)** across all providers and engines.
 
 ---
 
@@ -66,27 +68,36 @@ NHI Risk Analyzer automates discovery, security analysis, and targeted remediati
                                   ▼
                     ┌───────────────────────────┐
                     │          risk.py          │
-                    │    (Offline Risk Engine)  │
+                    │    (--cloud Orchestrator) │
                     └─────────────┬─────────────┘
                                   │
+         ┌────────────────────────┼────────────────────────┐
+         ▼                        ▼                        ▼
+  ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+  │  aws.py sub- │         │ azure.py sub-│         │  gcp.py sub- │
+  │    runner    │         │    runner    │         │    runner    │
+  │ (13 Rules)   │         │  (5 Rules)   │         │  (6 Rules)   │
+  └──────┬───────┘         └──────┬───────┘         └──────┬───────┘
+         └────────────────────────┼────────────────────────┘
                                   ▼
                     ┌───────────────────────────┐
                     │        dispatch.py        │
                     │ (Containment Dispatcher)  │
                     └─────────────┬─────────────┘
                                   │
-                    ┌─────────────┴─────────────┐
-                    ▼                           ▼
-         ┌─────────────────────┐     ┌─────────────────────┐
-         │      policy.py      │     │    credential.py    │
-         │ (Attach Boundary)   │     │ (Deactivate Key)    │
-         └─────────────────────┘     └─────────────────────┘
+         ┌────────────────────────┴────────────────────────┐
+         ▼                                                 ▼
+┌─────────────────────────┐                     ┌─────────────────────┐
+│ policy_surgery.py &     │                     │    credential.py    │
+│ policy.py (Boundaries)  │                     │ (Deactivate Key)    │
+└─────────────────────────┘                     └─────────────────────┘
 ```
 
 1. **State Collection (`nhi/services/inventory.py`):** Queries cloud APIs across AWS, Azure, and GCP, enriches credential metadata (access key last-used, secret expiration), and serializes a clean state snapshot to `inventory.json`.
-2. **Offline Evaluation (`nhi/risk/risk.py`):** Loads `inventory.json` locally and passes resource payloads through modular security rules inside `nhi/risk/rules/`.
-3. **Artifact Export & Run-over-Run Diffing (`nhi/services/export.py`, `nhi/remediation/diff.py`):** Calculates security drift against historical baseline scans, uploads execution artifacts to cloud storage, and exports findings to CSV and OASIS SARIF v2.1.0 for audit pipelines.
-4. **Remediation Dispatcher (`nhi/remediation/dispatch.py`):** Routes actionable findings through safe containment handlers with fail-closed safety, dry-run simulation mode, and exemption filtering via `nhi-ignore.yaml`.
+2. **Selective Cloud Orchestrator (`nhi/risk/risk.py`):** Accepts `--cloud {aws,azure,gcp,all}` to selectively target cloud providers, saving unnecessary API calls and avoiding cross-tenant rate limits.
+3. **Modular Risk Runners (`nhi/risk/runners/`):** Decoupled execution engines (`aws.py`, `azure.py`, `gcp.py`) process provider inventories against modular security rules with defensive guards against partial or missing cloud payloads.
+4. **Artifact Export & Run-over-Run Diffing (`nhi/services/export.py`, `nhi/remediation/diff.py`):** Calculates security drift against historical baseline scans, uploads execution artifacts to cloud storage, and exports findings to CSV and OASIS SARIF v2.1.0 for audit pipelines.
+5. **Remediation & Policy Surgery (`nhi/remediation/`):** AST-level policy statement partitioning (`policy_surgery.py`) and non-destructive containment boundaries/key deactivation with dry-run simulation mode and `nhi-ignore.yaml` exemptions.
 
 ---
 
@@ -115,28 +126,51 @@ Rather than bundling heavy, fragmented cloud SDKs (`azure-mgmt-*`, `msgraph-sdk`
 
 ## 🛡️ Rule Coverage & Remediation Mapping
 
-Rule IDs are grouped by category rather than numbered strictly sequentially — `AWS_01–03` cover general policy analysis, `AWS_04–08` cover documented privilege-escalation paths, and `AWS_11–12` cover credential hygiene. `AWS_09–10` are reserved for planned trust-policy analysis.
+The platform enforces **26 active security rules** across AWS, Azure, and GCP, targeting privilege escalation vectors, overly permissive policies, and dormant machine credentials.
 
-| Rule ID      | Name                                                          | Category              | Severity                                 | Status         | Remediation Action                                       |
-| :----------- | :------------------------------------------------------------ | :-------------------- | :--------------------------------------- | :------------- | :------------------------------------------------------- |
-| **`AWS_01`** | Wildcard Actions in Policies                                  | Policy Analysis       | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`AWS_02`** | Wildcard Resources in Policies                                | Policy Analysis       | `HIGH` / `LOW` (scoped-prefix downgrade) | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`AWS_03`** | Full Administrator Access                                     | Policy Analysis       | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (detach planned for Phase 5) |
-| **`AWS_04`** | Privilege Escalation via `iam:PassRole`                       | Privilege Escalation  | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`AWS_05`** | Privilege Escalation via `iam:CreatePolicyVersion`            | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`AWS_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`)    | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`AWS_07`** | Privilege Escalation via `iam:CreateAccessKey`                | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`AWS_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`)     | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`AWS_09`** | Privilege Escalation via `iam:SetDefaultPolicyVersion`        | Privilege Escalation  | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (Explicit Deny)              |
-| **`AWS_10`** | Permissive Role Trust Policies (`*` AssumeRole Principal)     | Trust Policy Analysis | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`AWS_11`** | Stale Access Keys (>90 Days Old)                              | Credential Security   | `HIGH` / `LOW`                           | ✅ Implemented | Deactivate Key (`Status: Inactive`)                      |
-| **`AWS_12`** | Unused & Dormant Access Keys (>30 Days)                       | Credential Security   | `HIGH`                                   | ✅ Implemented | Deactivate Key (`Status: Inactive`)                      |
-| **`AWS_14`** | Unrestricted S3 Data Exfiltration (`s3:GetObject*`, `s3:*`)   | Data Perimeter        | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`AWS_15`** | Security Defense Evasion (CloudTrail/GuardDuty/KMS tampering) | Resource Protection   | `CRITICAL`                               | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`AWS_16`** | Unrestricted KMS Decryption (`kms:Decrypt`, `kms:*`)          | Data Perimeter        | `HIGH`                                   | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
-| **`TAG_01`** | Missing Mandatory Governance Tags (`Owner`, `Environment`)    | Governance & Tagging  | `LOW`                                    | ✅ Implemented | Apply Mandatory Tags                                     |
+### 🟧 AWS IAM Rules
 
-**Detection methodology sources:** Rules are informed by Rhino Security Labs' documented AWS IAM privilege escalation research (21 methods), Salesforce's Cloudsplaining policy-severity methodology, the CIS AWS Foundations Benchmark (credential hygiene thresholds), and AWS's own IAM best-practices documentation.
+| Rule ID | Name | Category | Severity | Status | Remediation / Impact |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`AWS_01`** | Wildcard Actions in Policies | Policy Analysis | `HIGH` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_02`** | Wildcard Resources in Policies | Policy Analysis | `HIGH` / `LOW` | ✅ Implemented | Attach Permissions Boundary / AST Statement Partitioning |
+| **`AWS_03`** | Full Administrator Access | Policy Analysis | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (detach planned for Phase 5) |
+| **`AWS_04`** | Privilege Escalation via `iam:PassRole` | Privilege Escalation | `HIGH` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`AWS_05`** | Privilege Escalation via `iam:CreatePolicyVersion` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`AWS_06`** | Direct Escalation via Policy Attachment (`Attach*`/`Put*`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`AWS_07`** | Privilege Escalation via `iam:CreateAccessKey` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`AWS_08`** | Console Access Escalation (`Create`/`UpdateLoginProfile`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`AWS_09`** | Privilege Escalation via `iam:SetDefaultPolicyVersion` | Privilege Escalation | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (Explicit Deny) |
+| **`AWS_10`** | Permissive Role Trust Policies (`*` AssumeRole Principal) | Trust Policy Analysis | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_11`** | Stale Access Keys (>90 Days Old) | Credential Security | `HIGH` / `LOW` | ✅ Implemented | Deactivate Key (`Status: Inactive`) |
+| **`AWS_12`** | Unused & Dormant Access Keys (>30 Days) | Credential Security | `HIGH` | ✅ Implemented | Deactivate Key (`Status: Inactive`) |
+| **`AWS_14`** | Unrestricted S3 Data Exfiltration (`s3:GetObject*`, `s3:*`) | Data Perimeter | `HIGH` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_15`** | Security Defense Evasion (CloudTrail/GuardDuty/KMS tampering) | Resource Protection | `CRITICAL` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`AWS_16`** | Unrestricted KMS Decryption (`kms:Decrypt`, `kms:*`) | Data Perimeter | `HIGH` | ✅ Implemented | Attach Permissions Boundary (`nhi-permissions-boundary`) |
+| **`TAG_01`** | Missing Mandatory Governance Tags (`Owner`, `Environment`) | Governance & Tagging | `LOW` | ✅ Implemented | Apply Mandatory Tags |
+
+### 🟦 Azure Entra ID & RBAC Rules
+
+| Rule ID | Name | Category | Severity | Status | Attack Vector / Detection |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`AZURE_01`** | Subscription Takeover via Owner / User Access Admin | Privilege Escalation | `CRITICAL` | ✅ Implemented | Service Principal assigned `Owner` or `User Access Administrator` at subscription scope (`/subscriptions/{id}`) |
+| **`AZURE_02`** | Entra ID Privilege Escalation via Microsoft Graph | Privilege Escalation | `CRITICAL` | ✅ Implemented | High-privilege Graph app permissions (`AppRoleAssignment.ReadWrite.All`, `RoleAssignment.ReadWrite.All`, `Application.ReadWrite.All`) |
+| **`AZURE_03`** | RCE via Virtual Machine Contributor | Privilege Escalation | `HIGH` | ✅ Implemented | Service Principal assigned `Virtual Machine Contributor` capable of arbitrary root execution via Azure RunCommand |
+| **`AZURE_04`** | Secret Harvesting via Key Vault Secrets Officer | Privilege Escalation | `HIGH` | ✅ Implemented | Service Principal assigned `Key Vault Administrator` or `Secrets Officer` enabling direct data-plane secret extraction |
+| **`AZURE_05`** | Stale or Never-Expiring Service Principal Credentials | Credential Security | `MEDIUM` | ✅ Implemented | Client secret (`passwordCredentials`) or cert (`keyCredentials`) exceeding 180-day lifespan or configured with no expiry |
+
+### 🟥 GCP IAM & Service Account Rules
+
+| Rule ID | Name | Category | Severity | Status | Attack Vector / Detection |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`GCP_01`** | Service Account Impersonation (`TokenCreator`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Service Account bound to `roles/iam.serviceAccountTokenCreator`, enabling minting OAuth tokens as other SAs |
+| **`GCP_02`** | Persistent Backdoor Key Creation (`KeyAdmin`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Service Account bound to `roles/iam.serviceAccountKeyAdmin`, enabling creation of out-of-band user-managed private keys |
+| **`GCP_03`** | Workload Attachment (`ServiceAccountUser`) | Privilege Escalation | `HIGH` | ✅ Implemented | Service Account bound to `roles/iam.serviceAccountUser`, enabling attachment of privileged SAs to compute workloads |
+| **`GCP_04`** | Direct Project Policy Manipulation (`setIamPolicy`) | Privilege Escalation | `CRITICAL` | ✅ Implemented | Service Account assigned `roles/iam.securityAdmin` or `roles/resourcemanager.projectIamAdmin` allowing direct IAM rewriting |
+| **`GCP_05`** | Serverless Privilege Escalation | Privilege Escalation | `HIGH` | ✅ Implemented | Service Account granted `roles/cloudfunctions.developer` or `roles/run.developer` to deploy code executing under default SA |
+| **`GCP_06`** | Stale User-Managed Service Account Keys | Credential Security | `MEDIUM` | ✅ Implemented | User-managed SA key older than 90 days (`validAfterTime`), indicating rotation failure |
+
+**Detection methodology sources:** Rules are informed by Rhino Security Labs' documented AWS IAM privilege escalation research (21 methods), NetSPI and SpecterOps Azure attack paths, Rhino Security Labs GCP privilege escalation vectors, Salesforce's Cloudsplaining policy-severity methodology, CIS Foundations Benchmarks, and cloud vendor best practices.
 
 ### Example Security Finding
 
@@ -163,6 +197,23 @@ Rather than performing destructive and risky surgical policy rewrites in real ti
 - **Hard Deny Guardrails:** Explicitly denies dangerous escalation actions (`iam:PutUserPermissionsBoundary`, `iam:DeleteRolePermissionsBoundary`, `iam:DeleteUserPermissionsBoundary`, `iam:PassRole`, `iam:CreatePolicyVersion`, etc.) so the identity cannot strip its own boundary ceiling or escalate permissions.
 - **Non-Destructive Key Deactivation:** Stale and unused keys are toggled to `Inactive` rather than deleted, providing instant emergency rollback capabilities.
 - **Exemption Management:** Protected identities (break-glass roles, runner identities) are defined in `nhi-ignore.yaml` and skipped automatically.
+
+---
+
+## 🔬 AST Policy Surgery (`nhi/remediation/policy_surgery.py`)
+
+In addition to coarse-grained Permissions Boundary ceilings, the engine provides in-place **AST (Abstract Syntax Tree) Policy Surgery** to safely partition and scope over-permissive IAM policy statements without service downtime:
+
+1. **Intelligent Action Partitioning (`is_non_resource_action`):**
+   AWS IAM requires `Resource: "*"` for non-resource discovery actions (e.g., `ec2:Describe*`, `s3:ListAllMyBuckets`, `iam:GetAccountAuthorizationDetails`). Naive scanners that blindly replace `*` with target ARNs cause AWS IAM API validation errors or break operational monitoring. The surgery engine accurately partitions actions into discovery vs. resource-scoped operations.
+2. **Statement Splitting:**
+   When an `Allow` statement mixes discovery APIs with sensitive mutations (e.g., `ec2:Describe*` with `s3:PutObject` on `*`), the document is programmatically partitioned into two statements:
+   - `{base_sid}Discovery`: Retains discovery actions with `Resource: "*"`.
+   - `{base_sid}Scoped`: Scopes mutating actions (`Put*`, `Delete*`, `Decrypt`, etc.) to explicit target ARNs (`arn:aws:s3:::my-bucket/*`).
+3. **`Sid` Idempotence:**
+   Statements already isolated to discovery-only or scoped-only operations preserve their existing `Sid` deterministically without accumulating duplicate suffixes across recurring scans.
+4. **Condition & Deny Preservation:**
+   All `Condition` blocks, `NotAction`, `NotResource`, and `Deny` statements remain intact with zero syntactic mutations.
 
 ---
 
@@ -294,37 +345,45 @@ The architecture decouples offline rule evaluation from remediation dispatching,
   - Standalone CLI packaging via `pyproject.toml` (`nhi` command) with custom `--csv` and OASIS SARIF v2.1.0 (`--sarif`) report exports
   - 100% offline unit test suite with `pytest` (`tests/test_remediation.py`, `tests/test_diff.py`, `tests/test_sarif.py`)
 
+- [x] **Phase 5: Multi-Cloud Discovery & Unified Risk Engine (Azure & GCP)**
+  - Pure REST ingestion layers for Azure (`nhi/azure/`) and GCP (`nhi/gcp/`) eliminating bulky SDKs and native `grpcio` dependencies
+  - Cross-cloud inventory normalization in `nhi/services/inventory.py`
+  - Decoupled provider sub-runners (`nhi/risk/runners/`) with selective `--cloud {aws,azure,gcp,all}` CLI targeting
+  - Comprehensive privilege escalation and credential rules for Azure (`AZURE_01`–`AZURE_05`) and GCP (`GCP_01`–`GCP_06`)
+  - 102 passing unit tests across all multi-cloud discovery and risk engines
+
+- [x] **Phase 6: AST Policy Surgery Foundation**
+  - Intelligent action partitioning (`is_non_resource_action`) separating non-resource discovery APIs from resource-scoped operations
+  - Statement splitting into `{base_sid}Discovery` and `{base_sid}Scoped`
+  - Deterministic `Sid` idempotence preventing duplicate suffix accumulation
+  - Condition block and Deny preservation
+
 ---
 
 ### 🔮 Future Architectural Planning
 
-#### Phase 5: Risk Engine V2 & 3-Tier Remediation
+#### Phase 7: 3-Tier Remediation Architecture & Automated Rollback Ledger
 
-- **Tier 3 Policy Surgery:**
-  - Implement automated AST document rewrites via `policy_surgery.py` for inline policies.
-  - Statement partitioning: Separate non-resource discovery APIs (`Describe*`, `List*`) from scoped resource mutations (`Put*`, `Get*`, `Decrypt`).
-  - Rollback journaling: Save the pre-surgery policy JSON snapshot to S3 before executing `PutUserPolicy` / `PutRolePolicy` updates.
-- **Direct AdministratorAccess Detachment:** Dedicated handler for `AWS_03` to cleanly detach root-equivalent managed policies.
-- **Target-Level Remediation Deduplication:** Coalesce multi-finding dispatches to execute single, unified remediation calls per IAM identity.
+The platform is expanding beyond coarse boundary ceilings into a defense-in-depth, **3-Tier Remediation Model**:
 
-#### Phase 6: Team Communication & Event Notifications
+- **Tier 1 — Permissions Boundary Containment & Key Deactivation (Implemented / Hardening):**
+  - Attaches fail-closed Permissions Boundaries (`nhi-permissions-boundary`) to over-privileged identities to neutralize escalation vectors while preserving normal service read/write workloads (`nhi/remediation/handlers/policy.py`).
+  - Non-destructive credential deactivation toggling stale/dormant keys to `Inactive` for instant emergency rollback (`nhi/remediation/handlers/credential.py`).
+- **Tier 2 — Direct Root Policy Detachment & Multi-Cloud Credential Revocation (Planned):**
+  - Dedicated handler for `AWS_03` to cleanly detach root-equivalent managed policies (`AdministratorAccess`) from unexempted machine identities.
+  - Multi-cloud credential containment: Automated deactivation of expired Entra ID app credentials (`AZURE_05`) and disabling of stale GCP user-managed service account keys (`GCP_06`).
+- **Tier 3 — AST Policy Surgery & GitOps PR Generation (Core Engine Built, Live Pipeline Planned):**
+  - Automated AST document rewrites via `policy_surgery.py` to rewrite inline/attached policies into least-privilege definitions.
+  - Statement partitioning: separating discovery APIs (`Describe*`, `List*`) from scoped resource mutations (`Put*`, `Get*`, `Decrypt`).
+  - S3 Rollback Journal: Writing immutable pre-surgery snapshots to an S3 ledger before executing cloud mutations for instant, one-click state reversion.
+  - GitOps Integration: Generating pull requests with minimal unified JSON/Terraform HCL diffs for team peer-review before production apply.
+- **Target-Level Remediation Deduplication:** Coalesce multi-finding dispatches to execute single, unified remediation calls per identity.
+
+#### Phase 8: Team Communication & Event Notifications
 
 - **Slack & Microsoft Teams Webhooks:** High/Critical findings pushed to dedicated SecOps channels with interactive "Acknowledge" or "Remediate" buttons.
 - **Jira / ITSM Ticket Automation:** Automatic ticket generation for identified high-severity policy wildcards or dormant keys, assigning tasks directly to resource owner teams.
-- **Event-Driven Architecture (AWS EventBridge / Lambda):** Trigger scans automatically upon IAM creation events (`CreateUser`, `CreateAccessKey`, `PutRolePolicy`). At this point the automation runner's authentication moves off static keys entirely — GitHub Actions via OIDC federation for CI/CD triggers, and a Lambda execution role directly as the trust-policy principal.
-
-#### Phase 7: Multi-Cloud Discovery & Unified Risk Engine (Azure & GCP)
-
-- **Azure Discovery Plane (`nhi/azure/`):**
-  - **Entra ID Layer:** Graph API ingestion for Users, Security Groups, Service Principals, and App Registrations.
-  - **Azure Resource Manager Layer:** ARM ingestion for Role Assignments, Role Definitions, and User-Assigned Managed Identities.
-  - **Credential Hygiene:** Tracking secret (`passwordCredentials`) and certificate (`keyCredentials`) expiration and rotation windows.
-- **GCP Discovery Plane (`nhi/gcp/`):**
-  - Service Accounts, Service Account Key lifecycles (expiration/staleness), and Project IAM Policy bindings via lightweight REST endpoints.
-- **Unified Multi-Cloud Inventory (`nhi/services/inventory.py`):**
-  - Cross-cloud normalized schema mapping AWS IAM Roles/Users, Azure Service Principals/Managed Identities, and GCP Service Accounts into a singular Non-Human Identity inventory model.
-
----
+- **Event-Driven Architecture (AWS EventBridge / Lambda):** Trigger scans automatically upon IAM creation events (`CreateUser`, `CreateAccessKey`, `PutRolePolicy`). Authenticates serverless scanners keylessly via IAM execution roles and GitHub OIDC federation.
 
 ## ⚙️ Environment & Execution Setup
 
@@ -464,23 +523,44 @@ nhi-risk-analyzer/
 ├── .github/
 │   └── workflows/
 │       └── nhi-scan.yml           # Automated CI/CD security scan via AWS OIDC & SARIF
+├── docs/                          # Architecture blueprints, active tasks & interview trackers
+│   ├── PRODUCT_BLUEPRINT.md       # 5-Layer Production SaaS Architecture & Blueprint
+│   ├── ACTIVE_TASK.md             # Current active implementation tasks & specs
+│   ├── INTERVIEW_PROGRESS_PRONG1_PROJECT.md # Project code mastery & Terraform drill tracker
+│   └── INTERVIEW_PROGRESS_PRONG2_DEVSECOPS.md # Level 1-100 DevSecOps screener tracker
 ├── nhi/
-│   ├── aws/                       # Boto3 wrappers & session management
+│   ├── aws/                       # AWS Boto3 wrappers & session management
 │   │   ├── iam.py                 # IAM API helpers
 │   │   ├── s3.py                  # S3 upload & retrieval utilities
 │   │   └── session.py             # Dual-mode (OIDC ambient + STS assume) session logic
+│   ├── azure/                     # Azure pure-REST discovery engine
+│   │   ├── auth.py                # DefaultAzureCredential & Bearer token management
+│   │   ├── graph.py               # Microsoft Graph API client (SP, App Regs, Creds)
+│   │   └── arm.py                 # Azure Resource Manager client (RBAC, Role Assigns)
+│   ├── gcp/                       # GCP pure-REST discovery engine
+│   │   ├── auth.py                # Application Default Credentials (ADC) token management
+│   │   ├── iam.py                 # GCP IAM REST client (Service Accounts & Keys)
+│   │   └── resourcemanager.py     # GCP Resource Manager REST client (Project IAM Policy)
 │   ├── remediation/               # Automated remediation & diffing engine
 │   │   ├── dispatch.py            # Handler routing & stats collection
 │   │   ├── diff.py                # Posture drift & diffing logic
 │   │   ├── config.py              # Exemption parser for nhi-ignore.yaml
+│   │   ├── policy_surgery.py      # AST policy statement partitioning & ARN scoping
 │   │   └── handlers/              # Boundary & deactivation logic
-│   ├── risk/                      # Core evaluation logic
-│   │   ├── risk.py                # Main CLI runner & entry point
-│   │   ├── helpers.py             # Classification utilities
-│   │   └── rules/                 # IAM risk detection modules
+│   ├── risk/                      # Core multi-cloud evaluation engine
+│   │   ├── risk.py                # Main CLI runner & orchestrator (--cloud support)
+│   │   ├── helpers.py             # Non-resource action classification & helpers
+│   │   ├── runners/               # Decoupled provider sub-runners
+│   │   │   ├── aws.py             # AWS risk checks sub-runner
+│   │   │   ├── azure.py           # Azure RBAC & Entra ID sub-runner
+│   │   │   └── gcp.py             # GCP IAM & Service Account sub-runner
+│   │   └── rules/                 # Modular risk detection rules
+│   │       ├── aws/               # AWS rules (AWS_01-AWS_16, TAG_01)
+│   │       ├── azure/             # Azure rules (AZURE_01-AZURE_05)
+│   │       └── gcp/               # GCP rules (GCP_01-GCP_06)
 │   ├── services/
 │   │   ├── export.py              # JSON and CSV output handlers
-│   │   ├── inventory.py           # State collection via Boto3
+│   │   ├── inventory.py           # Multi-cloud state collection orchestrator
 │   │   └── sarif.py               # OASIS SARIF v2.1.0 report generator
 │   └── config.py                  # Global threshold configurations
 ├── terraform/                     # Infrastructure as Code
@@ -489,7 +569,7 @@ nhi-risk-analyzer/
 │   ├── outputs.tf                 # Exported ARNs (including oidc_role_arn)
 │   ├── canary.tf                  # Canary IAM entities for detection validation
 │   └── remote_state.tf            # S3 remote backend & state locking
-├── tests/                         # Pytest unit testing suite
+├── tests/                         # Pytest 100% offline unit testing suite (102 tests)
 ├── .gitignore                     # Untracked files configuration
 ├── admin.sh                       # Local admin bootstrap (gitignored)
 ├── automation_test.py             # Local testing and automation script
@@ -601,32 +681,43 @@ cd ..
 
 ### 4. Source Credentials & Execute Discovery / Risk Analysis
 
-The execution engine provides three distinct run modes via CLI flags:
+The execution engine provides multi-cloud provider targeting via `--cloud` alongside flexible scan, export, and containment modes:
 
 ```bash
 # Source dynamically generated runner credentials and boundary ARN
 source runner.sh
 
-# 1. Pure Scan & Run-over-Run Diff (Calculates posture drift and persists snapshot to S3)
+# -------------------------------------------------------------
+# Multi-Cloud Provider Targeting (--cloud {aws,azure,gcp,all})
+# -------------------------------------------------------------
+# 1. Full Multi-Cloud Scan (Default: evaluates all configured clouds)
 nhi
 
-# 2. Export Findings to CSV for spreadsheet review and auditing
-nhi --csv findings.csv
+# 2. Target specific clouds to eliminate unnecessary API overhead & rate limits:
+nhi --cloud aws
+nhi --cloud azure
+nhi --cloud gcp
 
-# 3. Dry-Run Simulation Mode (Simulates containment and checks nhi-ignore.yaml exemptions)
-nhi --dry-run
+# -------------------------------------------------------------
+# Export & Security Reporting
+# -------------------------------------------------------------
+# 3. Export Multi-Cloud findings to CSV for auditing:
+nhi --cloud all --csv findings.csv
 
-# 4. Dry-Run with CSV export in one command
-nhi --dry-run --csv simulation_report.csv
+# 4. Export findings to OASIS SARIF v2.1.0 for CI/CD ingestion:
+nhi --cloud all --sarif results.sarif
 
-# 5. Export findings to OASIS SARIF v2.1.0 for GitHub Code Scanning / CI/CD
-nhi --sarif results.sarif
+# -------------------------------------------------------------
+# Remediation & Dry-Run Simulation
+# -------------------------------------------------------------
+# 5. Dry-Run Simulation (Simulates containment & validates nhi-ignore.yaml exemptions):
+nhi --cloud aws --dry-run
 
-# 6. Combined Dry-Run simulation with SARIF export
-nhi --dry-run --sarif security-scan.sarif
+# 6. Combined Dry-Run simulation with SARIF export:
+nhi --cloud aws --dry-run --sarif security-scan.sarif
 
-# 7. Live Containment Mode (Attaches Permissions Boundaries & deactivates stale keys)
-nhi --remediate
+# 7. Live Containment Mode (Attaches Permissions Boundaries & deactivates stale keys):
+nhi --cloud aws --remediate
 ```
 
 ---
