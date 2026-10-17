@@ -62,8 +62,10 @@ def scope_resource(resource, replacement_arns):
 
 def split_policy_statement(
     policy_doc: dict,
-    target_arns: list[str] | str = "arn:aws:*:*:*:placeholder/*",
+    target_arns: list[str] | str | None = None,
+    target_arn_placeholder: list[str] | str | None = None,
 ) -> dict:
+    resolved_target_arns = target_arns or target_arn_placeholder or "arn:aws:*:*:*:placeholder/*"
     if not isinstance(policy_doc, dict):
         return {}
 
@@ -107,7 +109,7 @@ def split_policy_statement(
                 "Sid": f"{base_sid}Scoped",
                 "Effect": "Allow",
                 "Action": scoped,
-                "Resource": scope_resource(statement.get("Resource"), target_arns),
+                "Resource": scope_resource(statement.get("Resource"), resolved_target_arns),
             }
 
             if "Condition" in statement:
@@ -119,10 +121,10 @@ def split_policy_statement(
 
         elif len(scoped) > 0 and len(discovery) == 0:
             scoped_statement = {
-                "Sid": f"{base_sid}Scoped" if statement.get("Sid") else base_sid,
+                "Sid": statement.get("Sid") or base_sid,
                 "Effect": "Allow",
                 "Action": scoped,
-                "Resource": scope_resource(statement.get("Resource"), target_arns),
+                "Resource": scope_resource(statement.get("Resource"), resolved_target_arns),
             }
             if "Condition" in statement:
                 scoped_statement["Condition"] = statement["Condition"]
@@ -131,7 +133,7 @@ def split_policy_statement(
 
         elif len(discovery) > 0 and len(scoped) == 0:
             discovery_statement = {
-                "Sid": f"{base_sid}Discovery" if statement.get("Sid") else base_sid,
+                "Sid": statement.get("Sid") or base_sid,
                 "Effect": "Allow",
                 "Action": discovery,
                 "Resource": "*",
