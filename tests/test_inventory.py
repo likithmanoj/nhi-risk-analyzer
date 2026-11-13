@@ -49,6 +49,74 @@ class TestInventoryMockInjection(unittest.TestCase):
     )
     self.assertEqual(key['AccessKeyLastUsed']['ServiceName'], 's3')
 
+  @patch('nhi.azure.iam.list_service_principals', return_value=[])
+  @patch('nhi.azure.iam.list_applications', return_value=[])
+  @patch('nhi.azure.iam.list_user_assigned_identities', return_value=[])
+  @patch('nhi.azure.iam.list_role_assignments')
+  @patch('nhi.azure.iam.list_role_definitions')
+  def test_get_azure_inventory_resolves_role_definition_names_and_permissions(
+      self, mock_defs, mock_assigns, mock_uai, mock_apps, mock_sp
+  ):
+    """Verifies that Azure role assignments with raw GUIDs are enriched with friendly names and permissions."""
+    from nhi.services.inventory import get_azure_inventory
+
+    # 1. Real Azure ARM shape: only roleDefinitionId with GUID, NO roleDefinitionName
+    mock_assigns.return_value = [{
+        'id': '/subscriptions/sub-123/providers/Microsoft.Authorization/roleAssignments/ra-1',
+        'properties': {
+            'principalId': 'sp-workload-runner',
+            'principalType': 'ServicePrincipal',
+            'roleDefinitionId': '/Subscriptions/sub-123/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635',
+            'scope': '/subscriptions/sub-123',
+        },
+    }]
+
+    # 2. Azure role definitions catalog
+    mock_defs.return_value = [{
+        'id': '/subscriptions/sub-123/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635',
+        'properties': {
+            'roleName': 'Owner',
+            'permissions': [{'actions': ['*'], 'notActions': []}],
+        },
+    }]
+
+    # 3. Execute inventory
+    result = get_azure_inventory()
+
+    # 4. Verify resolution
+    assignment = result['role_assignments'][0]
+    self.assertEqual(assignment['properties']['roleDefinitionName'], 'Owner')
+    self.assertEqual(
+        assignment['properties']['permissions'],
+        [{'actions': ['*'], 'notActions': []}],
+    )
+
+  @patch('nhi.azure.iam.list_service_principals', return_value=[])
+  @patch('nhi.azure.iam.list_applications', return_value=[])
+  @patch('nhi.azure.iam.list_user_assigned_identities', return_value=[])
+  @patch('nhi.azure.iam.list_role_assignments')
+  @patch('nhi.azure.iam.list_role_definitions')
+  def test_get_azure_inventory_handles_malformed_and_none_properties(
+      self, mock_defs, mock_assigns, mock_uai, mock_apps, mock_sp
+  ):
+    """Verifies that malformed items and explicit properties: None do not raise exceptions."""
+    from nhi.services.inventory import get_azure_inventory
+
+    mock_assigns.return_value = [
+        None,
+        "not-a-dict",
+        {"id": "ra-none-props", "properties": None},
+    ]
+    mock_defs.return_value = [
+        None,
+        "not-a-dict",
+        {"id": "rd-none-props", "properties": None},
+    ]
+
+    result = get_azure_inventory()
+    self.assertIsInstance(result, dict)
+    self.assertEqual(result['role_assignments'][2]['properties'], {})
+
 
 if __name__ == '__main__':
   unittest.main()

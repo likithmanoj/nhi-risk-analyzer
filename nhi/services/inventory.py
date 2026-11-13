@@ -96,6 +96,46 @@ def get_azure_inventory() -> dict:
     user_assigned_identities = azure_iam.list_user_assigned_identities()
     role_assignments = azure_iam.list_role_assignments()
     role_definitions = azure_iam.list_role_definitions()
+    role_map = {}
+    perms_map = {}
+    for rd in role_definitions:
+        if not isinstance(rd, dict):
+            continue
+        raw_id = (rd.get("id") or "").strip().lower()
+        rd_props = rd.get("properties") or {}
+        role_name = rd_props.get("roleName")
+        permissions = rd_props.get("permissions") or []
+
+        if raw_id:
+            role_map[raw_id] = role_name
+            perms_map[raw_id] = permissions
+            if "/" in raw_id:
+                guid = raw_id.split("/")[-1]
+                role_map[guid] = role_name
+                perms_map[guid] = permissions
+        raw_name = (rd.get("name") or "").strip().lower()
+        if raw_name:
+            role_map[raw_name] = role_name
+            perms_map[raw_name] = permissions
+
+    for ra in role_assignments:
+        if not isinstance(ra, dict):
+            continue
+        if not isinstance(ra.get("properties"), dict):
+            ra["properties"] = {}
+        props = ra["properties"]
+        target_id = (props.get("roleDefinitionId") or "").strip().lower()
+        target_guid = target_id.split("/")[-1] if "/" in target_id else target_id
+
+        if not props.get("roleDefinitionName"):
+            resolved_name = role_map.get(target_id) or role_map.get(target_guid)
+            if resolved_name:
+                props["roleDefinitionName"] = resolved_name
+
+        if "permissions" not in props:
+            resolved_perms = perms_map.get(target_id) or perms_map.get(target_guid)
+            if resolved_perms:
+                props["permissions"] = resolved_perms
 
     return {
         "service_principals": service_principals,

@@ -6,6 +6,8 @@ from nhi.risk.rules.azure.privilege_escalation import (
     analyze_key_vault_secret_officer,
 )
 from nhi.risk.rules.azure.credentials import analyze_stale_sp_credentials
+from unittest.mock import patch
+from nhi.services.inventory import get_azure_inventory
 
 
 class TestAzureSubscriptionOwnerRule(unittest.TestCase):
@@ -41,6 +43,46 @@ class TestAzureSubscriptionOwnerRule(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0]["RuleID"], "AZURE_01")
         self.assertEqual(findings[0]["Role"], "User Access Administrator")
+
+    @patch("nhi.azure.iam.list_service_principals", return_value=[])
+    @patch("nhi.azure.iam.list_applications", return_value=[])
+    @patch("nhi.azure.iam.list_user_assigned_identities", return_value=[])
+    @patch("nhi.azure.iam.list_role_assignments")
+    @patch("nhi.azure.iam.list_role_definitions")
+
+    def test_raw_arm_guid_resolved_by_inventory_triggers_azure_01(self, mock_defs, mock_assigns, mock_uai, mock_apps, mock_sp):
+        mock_assigns.return_value = [
+            {
+                "id": "/subscriptions/sub-123/providers/Microsoft.Authorization/roleAssignments/ra-raw-1",
+                "properties": {
+                    "principalId": "sp-workload-admin",
+                    "principalType": "ServicePrincipal",
+                    "roleDefinitionId": "/subscriptions/sub-123/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+                    "scope": "/subscriptions/sub-123",
+                },
+            }
+        ]
+        mock_defs.return_value = [
+            {
+                "id": "/subscriptions/sub-123/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635",
+                "properties": {
+                    "roleName": "Owner",
+                    "permissions": [{"actions": ["*"], "notActions": []}],
+                },
+            }
+        ]
+        inventory = get_azure_inventory()
+        resolved_assignments = inventory["role_assignments"]
+
+        
+        findings = analyze_subscription_owner_contributor(resolved_assignments)
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["RuleID"], "AZURE_01")
+        self.assertEqual(findings[0]["Severity"], "CRITICAL")
+        self.assertEqual(findings[0]["Role"], "Owner")
+        self.assertEqual(findings[0]["IdentityName"], "sp-workload-admin")
+        
 
     def test_ignores_human_users_and_groups(self):
         assignments = [
@@ -95,6 +137,27 @@ class TestAzureGraphAppRoleRule(unittest.TestCase):
         self.assertEqual(findings[0]["RuleID"], "AZURE_02")
         self.assertEqual(findings[0]["Severity"], "CRITICAL")
         self.assertEqual(findings[0]["Role"], "AppRoleAssignment.ReadWrite.All")
+
+    def test_positive_real_graph_app_role_guid_payload(self):
+        sps = [
+            {
+                "appId": "sp-graph-002",
+                "displayName": "Deployment-Pipeline-SP",
+                "appRoleAssignments": [
+                    {
+                        "id": "assignment-guid-1",
+                        "appRoleId": "06b708a9-e830-4db3-a914-8e69da51d44f",
+                        "resourceDisplayName": "Microsoft Graph",
+                    }
+                ],
+            }
+        ]
+        findings = analyze_graph_app_role_assignment(sps)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["RuleID"], "AZURE_02")
+        self.assertEqual(findings[0]["Severity"], "CRITICAL")
+        self.assertEqual(findings[0]["Role"], "AppRoleAssignment.ReadWrite.All")
+        self.assertEqual(findings[0]["IdentityName"], "Deployment-Pipeline-SP")
 
     def test_ignores_safe_permissions(self):
         sps = [
