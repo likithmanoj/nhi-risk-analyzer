@@ -32,34 +32,42 @@ def analyze_graph_app_role_assignment(service_principals):
     findings = []
     if not isinstance(service_principals, list):
         return findings
-
-    dangerous_permissions = {
-        "AppRoleAssignment.ReadWrite.All",
-        "Application.ReadWrite.All",
-        "RoleAssignment.ReadWrite.All",
-        "Directory.ReadWrite.All",
+    dangerous_roles_map = {
+        "06b708a9-e830-4db3-a914-8e69da51d44f": "AppRoleAssignment.ReadWrite.All",
+        "1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9": "Application.ReadWrite.All",
+        "9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8": "RoleManagement.ReadWrite.Directory",
+        "df021288-bdef-4463-88db-98f22de89214": "User.ReadWrite.All",
+        "approleassignment.readwrite.all": "AppRoleAssignment.ReadWrite.All",
+        "application.readwrite.all": "Application.ReadWrite.All",
+        "rolemanagement.readwrite.directory": "RoleManagement.ReadWrite.Directory",
+        "roleassignment.readwrite.all": "RoleAssignment.ReadWrite.All",
+        "directory.readwrite.all": "Directory.ReadWrite.All",
+        "user.readwrite.all": "User.ReadWrite.All",
     }
-
     for sp in service_principals:
         if not isinstance(sp, dict):
             continue
         sp_id = sp.get("appId") or sp.get("id") or sp.get("principalId")
         sp_name = sp.get("displayName") or sp.get("name") or sp_id
-
         permissions = sp.get("apiPermissions") or sp.get("appRoleAssignments") or []
         for perm in permissions:
-            perm_name = perm if isinstance(perm, str) else (perm.get("value") or perm.get("role") or perm.get("permission"))
-            if perm_name in dangerous_permissions:
+            if not perm:
+                continue
+            raw_target = perm if isinstance(perm, str) else (
+                perm.get("appRoleId") or perm.get("value") or perm.get("role") or perm.get("permission") or ""
+            )
+            target_key = str(raw_target).strip().lower()
+            matched_role = dangerous_roles_map.get(target_key)
+            if matched_role:
                 findings.append({
                     "RuleID": "AZURE_02",
                     "Severity": "CRITICAL",
                     "IdentityType": "ServicePrincipal",
                     "IdentityName": sp_name,
-                    "Finding": f"Entra ID Privilege Escalation via Microsoft Graph permission '{perm_name}'",
-                    "Role": perm_name,
+                    "Finding": f"Entra ID Privilege Escalation via Microsoft Graph permission '{matched_role}'",
+                    "Role": matched_role,
                     "Resource": "Microsoft.Graph",
                 })
-
     return findings
 
 

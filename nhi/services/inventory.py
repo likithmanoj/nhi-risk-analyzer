@@ -121,7 +121,9 @@ def get_azure_inventory() -> dict:
     for ra in role_assignments:
         if not isinstance(ra, dict):
             continue
-        props = ra.setdefault("properties", {})
+        if not isinstance(ra.get("properties"), dict):
+            ra["properties"] = {}
+        props = ra["properties"]
         target_id = (props.get("roleDefinitionId") or "").strip().lower()
         target_guid = target_id.split("/")[-1] if "/" in target_id else target_id
 

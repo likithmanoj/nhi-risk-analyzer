@@ -91,6 +91,32 @@ class TestInventoryMockInjection(unittest.TestCase):
         [{'actions': ['*'], 'notActions': []}],
     )
 
+  @patch('nhi.azure.iam.list_service_principals', return_value=[])
+  @patch('nhi.azure.iam.list_applications', return_value=[])
+  @patch('nhi.azure.iam.list_user_assigned_identities', return_value=[])
+  @patch('nhi.azure.iam.list_role_assignments')
+  @patch('nhi.azure.iam.list_role_definitions')
+  def test_get_azure_inventory_handles_malformed_and_none_properties(
+      self, mock_defs, mock_assigns, mock_uai, mock_apps, mock_sp
+  ):
+    """Verifies that malformed items and explicit properties: None do not raise exceptions."""
+    from nhi.services.inventory import get_azure_inventory
+
+    mock_assigns.return_value = [
+        None,
+        "not-a-dict",
+        {"id": "ra-none-props", "properties": None},
+    ]
+    mock_defs.return_value = [
+        None,
+        "not-a-dict",
+        {"id": "rd-none-props", "properties": None},
+    ]
+
+    result = get_azure_inventory()
+    self.assertIsInstance(result, dict)
+    self.assertEqual(result['role_assignments'][2]['properties'], {})
+
 
 if __name__ == '__main__':
   unittest.main()

@@ -64,7 +64,7 @@ def list_group_members(group_id: str) -> list:
     return fetch_all(f"{GRAPH_BASE_URL}/groups/{group_id}/members", get_graph_headers())    
 
 def list_service_principals() -> list:
-    return fetch_all(f"{GRAPH_BASE_URL}/servicePrincipals", get_graph_headers())
+    return fetch_all(f"{GRAPH_BASE_URL}/servicePrincipals?$expand=appRoleAssignments", get_graph_headers())
 
 def list_applications() -> list:
    return fetch_all(f"{GRAPH_BASE_URL}/applications", get_graph_headers())   
