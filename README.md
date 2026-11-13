@@ -318,6 +318,34 @@ The architecture decouples offline rule evaluation from remediation dispatching,
 
 ---
 
+## 🏆 Completed Architectural Milestones
+
+- [x] **AWS Infrastructure & Discovery Engine:**
+  - Automated IAM discovery via Boto3 session caching (`nhi/aws/session.py`), reducing STS calls by ~43%.
+  - Access key metadata enrichment (`GetAccessKeyLastUsed`) and tag governance inspection (`TAG_01`).
+- [x] **Pure REST Multi-Cloud Discovery (Azure & GCP):**
+  - Lightweight HTTP (`requests`) client without heavy SDKs (`azure-mgmt-*`, `google-cloud-iam`, `grpcio`).
+  - Dual-plane ingestion: Microsoft Graph API (`graph.microsoft.com`) and Azure ARM (`management.azure.com`).
+  - Google Cloud IAM policies, Service Account keys, and Workload Identity federation ingestion.
+- [x] **Multi-Cloud Risk Engine (26 Active Detection Rules):**
+  - 13 AWS privilege escalation, wildcard policy, and dormant credential rules (`AWS_01`–`AWS_16`).
+  - 5 Azure Entra ID and ARM RBAC rules (`AZURE_01`–`AZURE_05`).
+  - 6 GCP IAM and Service Account rules (`GCP_01`–`GCP_06`).
+- [x] **Automated Remediation & Containment Engine:**
+  - Permissions Boundary containment ceilings (`nhi-permissions-boundary`) neutralizing escalation without service downtime.
+  - Non-destructive credential deactivation toggling stale/dormant keys to `Inactive` with instant rollback.
+  - Multi-cloud exemption management via `nhi-ignore.yaml` and dry-run simulation mode.
+- [x] **AST Policy Surgery Engine (`policy_surgery.py`):**
+  - Abstract Syntax Tree (AST) policy statement partitioning (`is_non_resource_action`) separating discovery APIs from mutating actions.
+  - Deterministic `Sid` idempotence and condition/deny block preservation.
+- [x] **Drift Detection, Reporting & Export:**
+  - Run-over-run diffing engine (`diff.py`) with S3-backed state persistence for drift detection.
+  - OASIS SARIF v2.1.0 (`--sarif`) and CSV (`--csv`) audit exports for CI/CD pipeline integration.
+- [x] **Comprehensive Test Suite:**
+  - 106 passing unit tests across all providers, AST surgery, diff engines, and mock API injectors.
+
+---
+
 ## 🗺️ Production Engineering Roadmap
 
 The platform is engineered across 4 strategic phases targeting end-to-end zero-blind-spot identity security:
