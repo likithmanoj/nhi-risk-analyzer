@@ -189,21 +189,22 @@ The platform enforces **26 active security rules** across AWS, Azure, and GCP, t
 
 ---
 
-## 🔒 Containment Strategy: Why Permissions Boundaries?
+## 🛡️ The 3-Tier Defense-in-Depth Remediation Model
 
-Rather than performing destructive and risky surgical policy rewrites in real time (which can break legitimate production applications), automated policy remediation uses **Permissions Boundary Containment**:
+The platform enforces a graduated, fail-safe **3-Tier Remediation Pipeline** designed to eliminate privilege escalation attack paths while preventing accidental production outages:
 
-- **Baseline Ceiling (`Allow *`):** Leaves routine operational read/write actions untouched so services do not crash.
-- **Hard Deny Guardrails:** Explicitly denies dangerous escalation actions (`iam:PutUserPermissionsBoundary`, `iam:DeleteRolePermissionsBoundary`, `iam:DeleteUserPermissionsBoundary`, `iam:PassRole`, `iam:CreatePolicyVersion`, etc.) so the identity cannot strip its own boundary ceiling or escalate permissions.
-- **Non-Destructive Key Deactivation:** Stale and unused keys are toggled to `Inactive` rather than deleted, providing instant emergency rollback capabilities.
+### Tier 1 — Permissions Boundary Containment & Key Deactivation (Implemented & Active)
+- **Permissions Boundary Ceilings (`nhi-permissions-boundary`):** Rather than attempting risky real-time policy deletions, the engine attaches an explicit Boundary ceiling to over-privileged identities. This neutralizes escalation primitives (`iam:PassRole`, `iam:CreatePolicyVersion`, `iam:Attach*Policy`) while preserving normal operational read/write workflows (`nhi/remediation/handlers/policy.py`).
+- **Non-Destructive Key Deactivation:** Stale and unused keys are toggled to `Inactive` rather than deleted, providing instant emergency rollback capabilities (`nhi/remediation/handlers/credential.py`).
 - **Exemption Management:** Protected identities (break-glass roles, runner identities) are defined in `nhi-ignore.yaml` and skipped automatically.
 
----
+### Tier 2 — Direct Root Policy Detachment & Multi-Cloud Credential Revocation (Active Roadmap)
+- **Root Admin Detachment (`AWS_03`):** Cleanly detaches root-equivalent managed policies (`AdministratorAccess`) from unexempted machine identities.
+- **Multi-Cloud Credential Containment:** Automated deactivation of expired Entra ID app credentials (`AZURE_05`) and disabling of stale GCP user-managed service account keys (`GCP_06`).
+- **Target-Level Remediation Deduplication:** Coalesces multi-finding dispatches to execute single, unified remediation calls per identity.
 
-## 🔬 AST Policy Surgery (`nhi/remediation/policy_surgery.py`)
-
-In addition to coarse-grained Permissions Boundary ceilings, the engine provides in-place **AST (Abstract Syntax Tree) Policy Surgery** to safely partition and scope over-permissive IAM policy statements without service downtime:
-
+### Tier 3 — AST Policy Surgery & GitOps PR Bot (Core Engine Built, Live Pipeline Planned)
+In addition to coarse-grained boundary ceilings, the engine provides in-place **AST (Abstract Syntax Tree) Policy Surgery** (`nhi/remediation/policy_surgery.py`) to safely partition and scope over-permissive IAM policy statements without service downtime:
 1. **Intelligent Action Partitioning (`is_non_resource_action`):**
    AWS IAM requires `Resource: "*"` for non-resource discovery actions (e.g., `ec2:Describe*`, `s3:ListAllMyBuckets`, `iam:GetAccountAuthorizationDetails`). Naive scanners that blindly replace `*` with target ARNs cause AWS IAM API validation errors or break operational monitoring. The surgery engine accurately partitions actions into discovery vs. resource-scoped operations.
 2. **Statement Splitting:**
@@ -214,6 +215,10 @@ In addition to coarse-grained Permissions Boundary ceilings, the engine provides
    Statements already isolated to discovery-only or scoped-only operations preserve their existing `Sid` deterministically without accumulating duplicate suffixes across recurring scans.
 4. **Condition & Deny Preservation:**
    All `Condition` blocks, `NotAction`, `NotResource`, and `Deny` statements remain intact with zero syntactic mutations.
+5. **S3 Rollback Journal:**
+   Writes immutable pre-surgery snapshots to an encrypted S3 ledger before executing cloud mutations for instant, one-click state reversion.
+6. **GitOps Pull Request Generation:**
+   Generates pull requests with minimal unified JSON/Terraform HCL diffs for team peer-review before production apply.
 
 ---
 
